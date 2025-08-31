@@ -9,21 +9,20 @@ import type { MessageStatus, OutboundMessage } from '@messaging-service/types';
 
 const logger = pino();
 
-const redisUrl = new URL(process.env.REDIS_URL!);
+console.log('REDIS_URL:', process.env.REDIS_URL);
 
-const connection = {
-  host: redisUrl.hostname,
-  port: Number(redisUrl.port),
-  ...(redisUrl.username ? { username: redisUrl.username } : {}),
-  ...(redisUrl.password ? { password: redisUrl.password } : {}),
+if (!process.env.REDIS_URL) {
+  throw new Error('REDIS_URL not set in the environment!');
+}
+
+const connection = new Redis(process.env.REDIS_URL!, {
   maxRetriesPerRequest: null,
-};
+});
 
-const redis = new Redis(process.env.REDIS_URL || 'redis://redis:6379');
 const dispatchQueue = new Queue('messages.dispatch', { connection });
 
 const redlock = new Redlock(
-  [redis], // You can add more Redis clients for higher availability
+  [connection], // You can add more Redis clients for higher availability
   { retryCount: 0 } // Don't retry, just skip if lock not acquired
 );
 
