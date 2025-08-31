@@ -3,6 +3,7 @@ import { Processor } from './processor.js';
 import { createQueue } from './queue.js';
 import { createWorker } from './worker.js';
 import { RepositoryPrisma } from '@messaging-service/db';
+import { Redis } from "ioredis";
 import pino from 'pino';
 
 const logger = pino();
@@ -13,15 +14,9 @@ if (!process.env.REDIS_URL) {
   throw new Error('REDIS_URL not set in the environment!');
 }
 
-const redisUrl = new URL(process.env.REDIS_URL!);
-
-const connection = {
-  host: redisUrl.hostname,
-  port: Number(redisUrl.port),
-  username: redisUrl.username || undefined,
-  password: redisUrl.password || undefined,
+const connection = new Redis(process.env.REDIS_URL!, {
   maxRetriesPerRequest: null,
-};
+});
 
 async function start() {
   const repo = new RepositoryPrisma();
