@@ -24,7 +24,7 @@ const LOCK_TTL_MS = 60_000; // 1 minute
 export async function scheduleDueMessages() {
   const now = new Date();
 
-  const dueMessages: OutboundMessage[] = await prisma.outboundMessage.findMany({
+  const dueMessages = await prisma.outboundMessage.findMany({
     where: {
       status: 'SCHEDULED' as MessageStatus,
       scheduledAt: { lte: now },
