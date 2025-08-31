@@ -6,7 +6,7 @@ import { MessageStatus } from "./messageStatus.js";
 export type OutboundMessage = {
   id: string;
   externalId: string;
-  campaignId?: string;
+  campaignId?: string | null;
   recipientId: string;
   providerId: string;
   channel: Channel;
