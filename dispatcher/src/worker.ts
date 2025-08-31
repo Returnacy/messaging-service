@@ -36,8 +36,8 @@ export function createWorker(
       connection,
       concurrency: Number(process.env.WORKER_CONCURRENCY || concurrency),
       limiter: {
-        max: WORKER_MAX_ATTEMPTS,
-        duration: WORKER_BACKOFF_DELAY_MS
+        max: Number(process.env.WORKER_MAX_ATTEMPTS || WORKER_MAX_ATTEMPTS),
+        duration: Number(process.env.WORKER_BACKOFF_DELAY_MS || WORKER_BACKOFF_DELAY_MS)
       }
     }
   );
