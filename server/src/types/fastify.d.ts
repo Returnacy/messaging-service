@@ -1,9 +1,10 @@
 import "fastify";
+import { Redis } from 'ioredis';
 
 declare module 'fastify' {
   interface FastifyInstance {
     repository: RepositoryPrisma;
-    redisConnection: { host: string; port: number; maxRetriesPerRequest: null | number };
+    redisConnection: Redis;
   }
   interface FastifyRequest {
     auth: (JWTPayload & {

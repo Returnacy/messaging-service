@@ -1,8 +1,9 @@
 import fp from "fastify-plugin";
-
-import { RepositoryPrisma } from "@messaging-service/db";
+import { Redis } from "ioredis";
 
 export default fp(async (fastify) => {
-  const redisConnection = { host: 'redis', port: 6379, maxRetriesPerRequest: null };
+  const redisConnection = new Redis(process.env.REDIS_URL!, {
+    maxRetriesPerRequest: null,
+  });
   fastify.decorate("redisConnection", redisConnection);
 });
