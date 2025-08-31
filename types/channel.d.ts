@@ -1,0 +1,1 @@
+export type Channel = "EMAIL" | "SMS" | "PUSH" | "WHATSAPP" | "VIBER" | "VOICE"

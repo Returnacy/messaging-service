@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "useUnknownInCatchVariables": true,
+    "composite": true,             // required for project references
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "incremental": true             // paired with composite for faster rebuilds
+    // Do NOT set rootDir, outDir, baseUrl, paths here.
+    // Keep environment-specific "types" (e.g. node) out if some projects might differ.
+  }
+}

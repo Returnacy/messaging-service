@@ -1,0 +1,118 @@
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: messaging_dev
+    ports:
+      - "5450:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d messaging_dev -h postgres -p 5432"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Custom PgBouncer image in folder ./pgbouncer (Dockerfile.pgbouncer, entrypoint.sh, pgbouncer.ini)
+  pgbouncer:
+    build:
+      context: ./pgbouncer
+      dockerfile: Dockerfile.pgbouncer
+    environment:
+      # PG_USERS should come from GitHub Secrets as: "postgres:yourpw;other:pw2"
+      PG_USERS: "postgres:postgres"
+    ports:
+      - "6432:6432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h pgbouncer -p 6432 -U postgres || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    command: ["pgbouncer", "/etc/pgbouncer/pgbouncer.ini"]
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - redisdata:/data
+
+  db-test:
+    build:
+      context: .
+      dockerfile: ./db/Dockerfile.test
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@pgbouncer:6432/messaging_dev?pgbouncer=true&connection_limit=1
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: test
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["npm", "test"]
+    working_dir: /app/db
+
+  dispatcher-test:
+    build:
+      context: .
+      dockerfile: ./dispatcher/Dockerfile.test
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@pgbouncer:6432/messaging_dev?pgbouncer=true&connection_limit=1
+      REDIS_URL: redis://redis:6379
+      RESEND_API_KEY: test_1234567890abcdef
+      DECISIONTELECOM_API_KEY: test_abcdef1234567890
+      NODE_ENV: test
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db-test:
+        condition: service_completed_successfully
+    command: ["npm", "test"]
+    working_dir: /app/dispatcher
+
+  scheduler-test:
+    build:
+      context: .
+      dockerfile: ./scheduler/Dockerfile.test
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@pgbouncer:6432/messaging_dev?pgbouncer=true&connection_limit=1
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: test
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db-test:
+        condition: service_completed_successfully
+    command: ["npm", "test"]
+    working_dir: /app/scheduler
+
+  bull-board:
+    image: venatum/bull-board
+    environment:
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:

@@ -1,0 +1,130 @@
+generator client {
+  provider   = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+}
+
+enum Channel {
+  EMAIL
+  SMS
+  PUSH
+  WHATSAPP
+  VIBER
+  VOICE
+}
+
+enum MessageStatus {
+  QUEUED
+  SCHEDULED
+  SENDING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+  CANCELLED
+}
+
+model Provider {
+  id                         String              @id @default(cuid())
+  name                       String
+  channel                    Channel
+  // store only a vault reference or key id; avoid plaintext secrets in DB
+  credentialRef              String
+  config                     Json?    // non-secret settings: region, senderId, etc.
+  active                     Boolean             @default(true)
+  maxRps                     Int?     // optional override for adapter
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+
+  OutboundMessages           OutboundMessage[]
+  ProviderLogs               ProviderRequestLog[]
+}
+
+model MessagePayload {
+  id                         String              @id @default(cuid())
+  // final rendered content (snapshot) used for sending and auditing
+  subject                    String?
+  bodyText                   String
+  bodyHtml                   String?
+  from                       String
+  to                         Json     // snapshot of recipient contact(s): {email:..., phone:..., name:...}
+  metadata                   Json?    // arbitrary metadata (campaignId, tags, UTM, etc.)
+  attachments                Json?    // store pointers (S3 keys) if attachments exist
+  sizeBytes                  Int?
+  createdAt                  DateTime            @default(now())
+
+  OutboundMessages           OutboundMessage[]
+}
+
+model OutboundMessage {
+  id                         String              @id @default(cuid())
+  externalId                 String              @unique
+  campaignId                 String?   // opaque reference to campaign-service (do not copy campaign data)
+  recipientId                String    // opaque reference to user-service
+  channel                    Channel
+  providerId                 String
+  payloadId                  String
+  status                     MessageStatus       @default(QUEUED)
+  priority                   Int                 @default(10)
+  scheduledAt                DateTime?
+  sentAt                     DateTime?
+  deliveredAt                DateTime?
+  attempt                    Int                 @default(0)
+  maxAttempts                Int                 @default(1)
+  lastError                  String?
+  lastAttemptAt              DateTime?
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+
+  payload                    MessagePayload      @relation(fields: [payloadId], references: [id])
+  provider                   Provider            @relation(fields: [providerId], references: [id])
+  DeliveryReceipts           DeliveryReceipt[]
+  ProviderLogs               ProviderRequestLog[]
+}
+
+model DeliveryReceipt {
+  id                         String              @id @default(cuid())
+  outboundMessageId          String
+  providerMessageId          String?   // id returned by provider
+  provider                   String
+  eventType                  String    // e.g., delivered, dropped, bounce, opened, clicked for email
+  status                     String
+  timestamp                  DateTime
+  raw                        Json
+  createdAt                  DateTime            @default(now())
+
+  outboundMessage            OutboundMessage     @relation(fields: [outboundMessageId], references: [id])
+}
+
+model ProviderRequestLog {
+  id                         String              @id @default(cuid())
+  outboundMessageId          String?
+  providerId                 String
+  requestPayload             Json?
+  responsePayload            Json?
+  httpStatus                 Int?
+  createdAt                  DateTime            @default(now())
+  
+  outboundMessage            OutboundMessage?    @relation(fields: [outboundMessageId], references: [id])
+  provider                   Provider           @relation(fields: [providerId], references: [id])
+}
+
+model IdempotencyKey {
+  key                        String              @id
+  createdAt                  DateTime            @default(now())
+  responseRef                String?  // ref to stored response/result if you cache
+  expiresAt                  DateTime
+}
+
+model AuditLog {
+  id                         String              @id @default(cuid())
+  actor                      String?             // service or user
+  action                     String
+  targetId                   String?             // e.g., outboundMessageId
+  payload                    Json?
+  createdAt                  DateTime            @default(now())
+}

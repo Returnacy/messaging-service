@@ -1,0 +1,11 @@
+FROM node:current-alpine3.22 AS builder
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml ./
+COPY tsconfig.base.json ./
+COPY types ./types
+COPY db ./db
+COPY dispatcher ./dispatcher
+
+RUN corepack enable && pnpm install --no-frozen-lockfile
+RUN pnpm run -r build

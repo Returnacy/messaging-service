@@ -1,0 +1,31 @@
+{
+  "name": "@messaging-service/dispatcher",
+  "version": "0.1.0",
+  "author": "Riccardo Fabbian",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc -b .",
+    "start": "node dist/src/dispatcher.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.2",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^1.6.1"
+  },
+  "dependencies": {
+    "@messaging-service/db": "workspace:*",
+    "@messaging-service/types": "workspace:*",
+    "bullmq": "^5.58.0",
+    "dotenv": "^17.2.1",
+    "ioredis": "^5.7.0",
+    "pino": "^9.9.0",
+    "resend": "^6.0.1",
+    "tsconfig-paths": "^4.2.0"
+  }
+}

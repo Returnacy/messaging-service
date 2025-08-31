@@ -1,0 +1,23 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@tests/*": ["tests/*"],
+      "redlock": ["node_modules/redlock/dist/index.d.ts"]
+    },
+    "types": ["node"], // remove this line if @types/node installed and you prefer auto detection
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "isolatedModules": true
+  },
+  "references": [
+    { "path": "../types" },
+    { "path": "../db" },
+    { "path": "../utils" }
+  ],
+  "include": ["src", "tests"],
+  "exclude": ["dist"]
+}

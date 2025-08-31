@@ -1,0 +1,33 @@
+{
+  "name": "@messaging-service/server",
+  "version": "0.1.0",
+  "author": "Riccardo Fabbian",
+  "license": "MIT",
+  "type": "module",
+  "description": "Returnacy microservice that handles message routing",
+  "main": "src/app.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc -b .",
+    "start": "node dist/src/app.js"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.2",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^1.6.1"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.1.0",
+    "@messaging-service/db": "workspace:*",
+    "@messaging-service/types": "workspace:*",
+    "@messaging-service/utils": "workspace:*",
+    "fastify": "^5.5.0",
+    "fastify-plugin": "^5.0.1",
+    "tsconfig-paths": "^4.2.0",
+    "jose": "^6.0.13",
+    "zod": "^4.1.0",
+    "axios": "^1.11.0"
+  }
+}

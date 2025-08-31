@@ -1,0 +1,3 @@
+FROM edoburu/pgbouncer:latest
+
+COPY ./pgbouncer/pgbouncer.ini /etc/pgbouncer/pgbouncer.ini

@@ -1,0 +1,15 @@
+{
+  "name": "messaging-service",
+  "private": true,
+  "version": "0.1.0",
+  "author": "Riccardo Fabbian",
+  "license": "MIT",
+  "workspaces": [
+    "types",
+    "utils",
+    "db",
+    "scheduler",
+    "dispatcher",
+    "server"
+  ]
+}
