@@ -3,10 +3,10 @@ WORKDIR /app
 
 COPY package.json pnpm-workspace.yaml ./
 COPY tsconfig.base.json ./
-COPY ../types ./types
-COPY ../db ./db
-COPY ../utils ./utils
-COPY ../dispatcher ./dispatcher
+COPY types ./types
+COPY db ./db
+COPY utils ./utils
+COPY dispatcher ./dispatcher
 
 RUN corepack enable && pnpm install --no-frozen-lockfile
 RUN pnpm run -r build
