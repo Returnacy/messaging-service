@@ -13,7 +13,15 @@ if (!process.env.REDIS_URL) {
   throw new Error('REDIS_URL not set in the environment!');
 }
 
-const connection = { host: 'redis', port: 6379, maxRetriesPerRequest: null };
+const redisUrl = new URL(process.env.REDIS_URL!);
+
+const connection = {
+  host: redisUrl.hostname,
+  port: Number(redisUrl.port),
+  username: redisUrl.username || undefined,
+  password: redisUrl.password || undefined,
+  maxRetriesPerRequest: null,
+};
 
 async function start() {
   const repo = new RepositoryPrisma();
