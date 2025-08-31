@@ -125,3 +125,5 @@ pnpm --filter scheduler start
 ```
 
 3. Trigger deployment and wait for the container to build.
+
+## 4. Server (`/server`)
