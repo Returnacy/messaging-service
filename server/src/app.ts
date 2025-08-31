@@ -42,8 +42,8 @@ async function main() {
     server.register(legacyAuthPlugin);
   } else {
     server.register(keycloakAuthPlugin);
+    server.register(keycloakTokenPlugin);
   }
-  server.register(keycloakTokenPlugin);
   server.register(prismaRepositoryPlugin);
   server.register(redisConnectionPlugin);
 
