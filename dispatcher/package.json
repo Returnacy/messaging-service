@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "test:watch": "vitest",
     "build": "tsc -b .",
     "start": "node dist/src/dispatcher.js",
@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
+    "@vitest/coverage-v8": "1.6.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.2",
     "vite-tsconfig-paths": "^5.1.4",

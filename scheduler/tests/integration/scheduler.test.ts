@@ -3,11 +3,19 @@ import { Queue } from "bullmq";
 import { prisma } from "@messaging-service/db";
 import { scheduleDueMessages } from "@/scheduler.js";
 import { randomUUID } from "crypto";
-import { connect } from "http2";
+import { Redis } from 'ioredis';
 
-const testQueue = new Queue("messages.dispatch", {
-  connection: { host: "redis", port: 6379 },
+console.log('REDIS_URL:', process.env.REDIS_URL);
+
+if (!process.env.REDIS_URL) {
+  throw new Error('REDIS_URL not set in the environment!');
+}
+
+const connection = new Redis(process.env.REDIS_URL!, {
+  maxRetriesPerRequest: null,
 });
+
+const testQueue = new Queue("messages.dispatch", { connection });
 
 describe("scheduleDueMessages integration", () => {
   beforeEach(async () => {
@@ -64,7 +72,7 @@ describe("scheduleDueMessages integration", () => {
     expect(jobs.length).toBe(1);
     expect(jobs[0].data).toMatchObject({
       channel: "EMAIL",
-      outboundMessageId: msg.id,
+      id: msg.id,
       payload: expect.objectContaining({
         subject: "Test",
         bodyText: "This is a test message",

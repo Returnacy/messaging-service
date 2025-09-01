@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { execSync } from 'child_process';
 import { prisma } from '../../src/prismaClient.js';
 import { RepositoryPrisma } from '../../src/repository.prisma.js';

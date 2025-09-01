@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ '*' ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      REDIS_PORT: 6379
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8.8.0
+
+      - name: Verify pnpm
+        run: |
+          echo "node: $(node -v)"
+          echo "npm: $(npm -v)"
+          pnpm -v
+          which pnpm
+
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/v2.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose version
+
+      - name: Start local stack (Postgres, Redis)
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        run: docker-compose -f docker-compose.ci.yml up -d
+
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h 127.0.0.1 -p 5432 -U postgres; then
+              echo "Postgres is ready!"
+              exit 0
+            fi
+            echo "Waiting for Postgres..."
+            sleep 2
+          done
+          echo "Postgres did not become ready in time"
+          exit 1
+        env:
+          PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+
+      - name: Set DATABASE_URL & REDIS_URL
+        run: |
+          echo "DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@127.0.0.1:5432/messaging_dev" >> $GITHUB_ENV
+          echo "REDIS_URL=redis://127.0.0.1:${REDIS_PORT}" >> $GITHUB_ENV
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+
+      - name: Install dependencies
+        run: pnpm install
+      
+      - name: Debug show prisma versions & client files (optional)
+        run: |
+          node -e "try{console.log('@prisma/client', require('@prisma/client/package.json').version)}catch(e){console.log('@prisma/client not found')}"
+          node -e "try{console.log('prisma', require('prisma/package.json').version)}catch(e){console.log('prisma not found')}"
+          ls -la
+          ls -la node_modules || true
+
+      - name: Generate Prisma client for db
+        run: |
+          cd db
+          pnpm prisma generate --schema=./prisma/schema.prisma
+
+      - name: Build db package (TS -> JS)
+        run: pnpm --filter @messaging-service/db build
+
+      - name: Build dispatcher package (TS -> JS)
+        run: pnpm --filter @messaging-service/dispatcher build
+
+      - name: Build scheduler package (TS -> JS)
+        run: pnpm --filter @messaging-service/scheduler build
+
+      - name: Build server package (TS -> JS)
+        run: pnpm --filter @messaging-service/server build
+
+      - name: Run Prisma migrate + seed
+        run: |
+          cd db
+          pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
+
+      - name: Run tests with coverage
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          REDIS_URL: ${{ env.REDIS_URL }}
+        run: pnpm -r test
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+
+      - name: Tear down docker-compose
+        if: always()
+        run: docker-compose -f docker-compose.ci.yml down -v
