@@ -91,7 +91,7 @@ jobs:
           PG_USERS: ${{ secrets.PG_USERS }}
 
       - name: Prisma deploy + seed (pnpm)
-        run: pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
+        run: pnpm build && pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
         working-directory: db
 
       - name: Run tests (unit & integration) with coverage (pnpm)
