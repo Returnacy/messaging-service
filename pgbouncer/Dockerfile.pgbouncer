@@ -1,3 +1,3 @@
-FROM edoburu/pgbouncer:latest
+FROM edoburu/pgbouncer@sha256:11551161b92b1be015895a06d528342fcfc7f11b86d8bc75dcd478315da256eb
 
-COPY ./pgbouncer/pgbouncer.ini /etc/pgbouncer/pgbouncer.ini
+COPY ./pgbouncer.ini /etc/pgbouncer/pgbouncer.ini
