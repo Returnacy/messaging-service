@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   postgres:
-    image: postgres:sha256:aedabd10a05c7304233d006a186a42d7d350b11e702d227dc09a99882dafa142
+    image: postgres@sha256:aedabd10a05c7304233d006a186a42d7d350b11e702d227dc09a99882dafa142
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -36,7 +34,7 @@ services:
     command: ["pgbouncer", "/etc/pgbouncer/pgbouncer.ini"]
 
   redis:
-    image: redis:sha256:cc2dfb8f5151da2684b4a09bd04b567f92d07591d91980eb3eca21df07e12760
+    image: redis@sha256:cc2dfb8f5151da2684b4a09bd04b567f92d07591d91980eb3eca21df07e12760
     ports:
       - "6379:6379"
     healthcheck:
