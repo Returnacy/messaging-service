@@ -35,9 +35,6 @@ jobs:
           pnpm -v
           which pnpm
 
-      - name: Install dependencies
-        run: pnpm install
-
       - name: Install Docker Compose
         run: |
           sudo curl -L "https://github.com/docker/compose/releases/download/v2.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
@@ -71,15 +68,21 @@ jobs:
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
 
-      - name: Clean install
-        run: |
-          pnpm install --force
-          pnpm prisma generate --schema=./prisma/schema.prisma
-          ls -l node_modules/.prisma/client/
+      - name: Install dependencies for db
+        run: pnpm install
         working-directory: db
 
-      - name: Build project (TS -> JS)
+      - name: Generate Prisma client (db local)
+        run: pnpm prisma generate --schema=./prisma/schema.prisma
+        working-directory: db
+
+      - name: List generated Prisma client files (db local)
+        run: ls -l node_modules/.prisma/client/
+        working-directory: db
+
+      - name: Build db package (TS -> JS)
         run: pnpm build
+        working-directory: db
       
       - name: Run Prisma migrate + seed
         run: pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
