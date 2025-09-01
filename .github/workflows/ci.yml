@@ -63,8 +63,8 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
 
       - name: Prisma push (create schema)
-        run: cd db && pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
-        working-directory: .
+        run: pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
+        working-directory: db
 
       - name: Run tests (unit & integration) with coverage
         env:
