@@ -50,7 +50,7 @@ services:
       context: .
       dockerfile: ./db/Dockerfile
     environment:
-      DATABASE_URL: postgres://postgres:postgres@pgbouncer:6432/messaging_dev?pgbouncer=true&connection_limit=1
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/messaging_dev
       REDIS_URL: redis://redis:6379
       NODE_ENV: test
     depends_on:
