@@ -8,10 +8,8 @@ on:
 
 jobs:
   test:
-    name: Full test (unit + integration)
     runs-on: ubuntu-latest
     env:
-      # Local container ports used by docker-compose.ci.yml
       POSTGRES_HOST: 127.0.0.1
       POSTGRES_PORT: 5432
       PGBOUNCER_PORT: 6432
@@ -29,81 +27,63 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8.8.0 # or your preferred version
+          version: 8.8.0
 
-      - name: Verify pnpm is available
+      - name: Verify pnpm
         run: |
           echo "node: $(node -v)"
           echo "npm: $(npm -v)"
           pnpm -v
           which pnpm
 
-      - name: Cache pnpm store (optional fallback)
-        uses: actions/cache@v4
-        with:
-          # pnpm store path on Linux runners
-          path: ~/.local/share/pnpm/store/v3
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install dependencies (pnpm)
+      - name: Install dependencies
         run: pnpm install
-        working-directory: .
-      
+
       - name: Install Docker Compose
         run: |
           sudo curl -L "https://github.com/docker/compose/releases/download/v2.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
           sudo chmod +x /usr/local/bin/docker-compose
           docker-compose version
 
-      - name: Cache Docker layers (optional)
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-docker-cache
-          restore-keys: |
-            ${{ runner.os }}-docker-cache
-
-      - name: Start local stack (Postgres, PgBouncer, Redis) via docker-compose
+      - name: Start local stack (Postgres, PgBouncer, Redis)
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           PG_USERS: ${{ secrets.PG_USERS }}
-        run: |
-          docker-compose -f docker-compose.ci.yml up --build -d
-        working-directory: .
+        run: docker-compose -f docker-compose.ci.yml up -d
 
-      - name: Set DATABASE_URL & REDIS_URL for CI
+      - name: Wait for PgBouncer
         run: |
-          echo "DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@127.0.0.1:5432/messaging_dev" >> $GITHUB_ENV
+          for i in {1..30}; do
+            if pg_isready -h 127.0.0.1 -p 6432 -U postgres; then
+              echo "PgBouncer is ready!"
+              exit 0
+            fi
+            echo "Waiting for PgBouncer..."
+            sleep 2
+          done
+          echo "PgBouncer did not become ready in time"
+          exit 1
+        env:
+          PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+
+      - name: Set DATABASE_URL & REDIS_URL
+        run: |
+          echo "DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@127.0.0.1:6432/messaging_dev?pgbouncer=true" >> $GITHUB_ENV
           echo "REDIS_URL=redis://127.0.0.1:${REDIS_PORT}" >> $GITHUB_ENV
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
 
-      - name: Print DATABASE_URL and secrets
-        run: |
-          echo "DATABASE_URL=${DATABASE_URL}"
-          echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
-          echo "PG_USERS=${PG_USERS}"
-        env:
-          DATABASE_URL: ${{ env.DATABASE_URL }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          PG_USERS: ${{ secrets.PG_USERS }}
-
-      - name: Generate Prisma Client
+      - name: Build project (TS -> JS)
         run: pnpm build
-        working-directory: db
-
-      - name: Prisma deploy + seed (pnpm)
+      
+      - name: Run Prisma migrate + seed
         run: pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
-        working-directory: db
 
-      - name: Run tests (unit & integration) with coverage (pnpm)
+      - name: Run tests with coverage
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
           REDIS_URL: ${{ env.REDIS_URL }}
-        run: pnpm test
-        working-directory: .
+        run: pnpm test -- --coverage
 
       - name: Upload coverage report
         if: always()
@@ -115,4 +95,3 @@ jobs:
       - name: Tear down docker-compose
         if: always()
         run: docker-compose -f docker-compose.ci.yml down -v
-        working-directory: .

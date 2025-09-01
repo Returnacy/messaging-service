@@ -5,6 +5,11 @@
   "author": "Riccardo Fabbian",
   "license": "MIT",
   "scripts": {
+    "build:db": "pnpm --filter db build",
+    "build:dispatcher": "pnpm --filter dispatcher build",
+    "build:scheduler": "pnpm --filter scheduler build",
+    "build:server": "pnpm --filter server build",
+    "build": "pnpm --filter ... build",
     "test:dispatcher": "pnpm --filter dispatcher test",
     "test:scheduler": "pnpm --filter scheduler test",
     "test:server": "pnpm --filter server test",
