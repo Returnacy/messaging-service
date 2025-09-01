@@ -71,13 +71,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       
-      - name: Generate Prisma client for db
-        run: pnpm --filter db prisma generate --schema=./prisma/schema.prisma
-        working-directory: db
+      - name: Debug: show prisma versions & client files (optional)
+        run: |
+          node -e "try{console.log('@prisma/client', require('@prisma/client/package.json').version)}catch(e){console.log('@prisma/client not found')}"
+          node -e "try{console.log('prisma', require('prisma/package.json').version)}catch(e){console.log('prisma not found')}"
+          ls -la
+          ls -la node_modules || true
 
+      - name: Generate Prisma client for db
+        run: |
+          cd db
+          pnpm prisma generate --schema=./prisma/schema.prisma
+          
       - name: Build db package (TS -> JS)
-        run: pnpm build
-        working-directory: .
+        run: pnpm --filter @messaging-service/db build
+
+      - name: Build remaining packages
+        run: pnpm -r build --filter '!@messaging-service/db'
       
       - name: Run Prisma migrate + seed
         run: pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
