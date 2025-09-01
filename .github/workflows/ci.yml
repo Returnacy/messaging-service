@@ -68,13 +68,9 @@ jobs:
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
 
-      - name: Install dependencies for db
+      - name: Install dependencies
         run: pnpm install
-        working-directory: db
-
-      - name: Generate Prisma client (db local)
-        run: pnpm prisma generate --schema=./prisma/schema.prisma
-        working-directory: db
+        working-directory: .
 
       - name: List generated Prisma client files (db local)
         run: ls -l node_modules/.prisma/client/
@@ -82,7 +78,7 @@ jobs:
 
       - name: Build db package (TS -> JS)
         run: pnpm build
-        working-directory: db
+        working-directory: .
       
       - name: Run Prisma migrate + seed
         run: pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
