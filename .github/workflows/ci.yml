@@ -50,11 +50,7 @@ jobs:
       - name: Install dependencies (pnpm)
         run: pnpm install
         working-directory: .
-
-      - name: Build TypeScript (so dist/index.js exists for smoke tests)
-        run: pnpm run build
-        working-directory: .
-
+        
       - name: Cache Docker layers (optional)
         uses: actions/cache@v4
         with:
