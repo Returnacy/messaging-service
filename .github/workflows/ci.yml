@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ '*' ]
+
+jobs:
+  test:
+    name: Full test (unit + integration)
+    runs-on: ubuntu-latest
+    env:
+      # Local container ports used by docker-compose.ci.yml
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      PGBOUNCER_PORT: 6432
+      REDIS_PORT: 6379
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Cache Docker layers (optional)
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-cache
+          restore-keys: |
+            ${{ runner.os }}-docker-cache
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Build TypeScript (so dist/index.js exists for smoke tests)
+        run: npm run build
+        working-directory: .
+
+      - name: Start local stack (Postgres, PgBouncer, Redis) via docker-compose
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          # single-string of user:password pairs for entrypoint to write userlist.txt
+          PG_USERS: ${{ secrets.PG_USERS }}
+        run: |
+          docker-compose -f docker-compose.ci.yml up --build -d
+        working-directory: .
+
+      - name: Wait for services to be ready
+        run: scripts/wait-for-services.sh
+        working-directory: .
+
+      - name: Set DATABASE_URL & REDIS_URL for CI
+        run: |
+          echo "DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@127.0.0.1:${PGBOUNCER_PORT}/messaging_dev?pgbouncer=true" >> $GITHUB_ENV
+          echo "REDIS_URL=redis://127.0.0.1:${REDIS_PORT}" >> $GITHUB_ENV
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+
+      - name: Prisma push (create schema)
+        run: cd db && pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
+        working-directory: .
+
+      - name: Run tests (unit & integration) with coverage
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          REDIS_URL: ${{ env.REDIS_URL }}
+        run: pnpm test
+        working-directory: .
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+
+      - name: Tear down docker-compose
+        if: always()
+        run: docker-compose -f docker-compose.ci.yml down -v
+        working-directory: .
