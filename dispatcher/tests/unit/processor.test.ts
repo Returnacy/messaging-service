@@ -47,7 +47,7 @@ describe("Processor", () => {
 
     vi.mocked(sendWithResendAdapter).mockResolvedValue(true);
 
-    const res = await proc.processJob({ outboundMessageId: msg.id });
+    const res = await proc.processJob(msg);
     expect(res.success).toBe(true);
     expect(repo.logs.length).toBe(1);
     expect(repo.messages[msg.id]!.status).toBe("SENT");
@@ -67,7 +67,7 @@ describe("Processor", () => {
 
     vi.mocked(sendWithResendAdapter).mockRejectedValue(new Error("ETIMEDOUT"));
 
-    await expect(proc.processJob({ outboundMessageId: msg.id }))
+    await expect(proc.processJob(msg))
       .rejects.toThrow("ETIMEDOUT");
 
     expect(repo.messages[msg.id]!.attempt).toBe(1);
@@ -88,7 +88,7 @@ describe("Processor", () => {
 
     vi.mocked(sendWithResendAdapter).mockRejectedValue(new Error("500"));
 
-    const res = await proc.processJob({ outboundMessageId: msg.id });
+    const res = await proc.processJob(msg);
 
     expect(repo.messages[msg.id]!.status).toBe("FAILED");
     expect(res.failed).toBe(true);
@@ -109,7 +109,7 @@ describe("Processor", () => {
 
     vi.mocked(sendWithDecisionTelecomAdapter).mockResolvedValue(true);
 
-    const res = await proc.processJob({ outboundMessageId: msg.id });
+    const res = await proc.processJob(msg);
     expect(res.success).toBe(true);
     expect(repo.messages[msg.id]!.status).toBe("SENT");
   });
