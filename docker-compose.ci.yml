@@ -15,22 +15,6 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-  pgbouncer:
-    image: edoburu/pgbouncer@sha256:11551161b92b1be015895a06d528342fcfc7f11b86d8bc75dcd478315da256eb
-    environment:
-      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/messaging_dev
-      PG_USERS: ${PG_USERS:-"postgres:postgres"}
-    ports:
-      - "6432:6432"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h pgbouncer -p 6432 -U postgres || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-
   redis:
     image: redis@sha256:cc2dfb8f5151da2684b4a09bd04b567f92d07591d91980eb3eca21df07e12760
     ports:

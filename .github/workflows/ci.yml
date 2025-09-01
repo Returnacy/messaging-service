@@ -12,7 +12,6 @@ jobs:
     env:
       POSTGRES_HOST: 127.0.0.1
       POSTGRES_PORT: 5432
-      PGBOUNCER_PORT: 6432
       REDIS_PORT: 6379
 
     steps:
@@ -45,30 +44,29 @@ jobs:
           sudo chmod +x /usr/local/bin/docker-compose
           docker-compose version
 
-      - name: Start local stack (Postgres, PgBouncer, Redis)
+      - name: Start local stack (Postgres, Redis)
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          PG_USERS: ${{ secrets.PG_USERS }}
         run: docker-compose -f docker-compose.ci.yml up -d
 
-      - name: Wait for PgBouncer
+      - name: Wait for Postgres
         run: |
           for i in {1..30}; do
-            if pg_isready -h 127.0.0.1 -p 6432 -U postgres; then
-              echo "PgBouncer is ready!"
+            if pg_isready -h 127.0.0.1 -p 5432 -U postgres; then
+              echo "Postgres is ready!"
               exit 0
             fi
-            echo "Waiting for PgBouncer..."
+            echo "Waiting for Postgres..."
             sleep 2
           done
-          echo "PgBouncer did not become ready in time"
+          echo "Postgres did not become ready in time"
           exit 1
         env:
           PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
 
       - name: Set DATABASE_URL & REDIS_URL
         run: |
-          echo "DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@127.0.0.1:6432/messaging_dev?pgbouncer=true" >> $GITHUB_ENV
+          echo "DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@127.0.0.1:5432/messaging_dev" >> $GITHUB_ENV
           echo "REDIS_URL=redis://127.0.0.1:${REDIS_PORT}" >> $GITHUB_ENV
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
