@@ -75,7 +75,7 @@ jobs:
 
       - name: Set DATABASE_URL & REDIS_URL for CI
         run: |
-          echo "DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@127.0.0.1:${PGBOUNCER_PORT}/messaging_dev?pgbouncer=true" >> $GITHUB_ENV
+          echo "DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@127.0.0.1:5432/messaging_dev" >> $GITHUB_ENV
           echo "REDIS_URL=redis://127.0.0.1:${REDIS_PORT}" >> $GITHUB_ENV
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
