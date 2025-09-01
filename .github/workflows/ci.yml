@@ -86,9 +86,15 @@ jobs:
       - name: Build db package (TS -> JS)
         run: pnpm --filter @messaging-service/db build
 
-      - name: Build remaining packages
-        run: pnpm -r build --filter '!@messaging-service/db'
-      
+      - name: Build dispatcher package (TS -> JS)
+        run: pnpm --filter @messaging-service/dispatcher build
+
+      - name: Build scheduler package (TS -> JS)
+        run: pnpm --filter @messaging-service/scheduler build
+
+      - name: Build server package (TS -> JS)
+        run: pnpm --filter @messaging-service/server build
+
       - name: Run Prisma migrate + seed
         run: pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
 
