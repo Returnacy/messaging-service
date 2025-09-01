@@ -71,7 +71,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       
-      - name: Debug: show prisma versions & client files (optional)
+      - name: Debug show prisma versions & client files (optional)
         run: |
           node -e "try{console.log('@prisma/client', require('@prisma/client/package.json').version)}catch(e){console.log('@prisma/client not found')}"
           node -e "try{console.log('prisma', require('prisma/package.json').version)}catch(e){console.log('prisma not found')}"
@@ -82,7 +82,7 @@ jobs:
         run: |
           cd db
           pnpm prisma generate --schema=./prisma/schema.prisma
-          
+
       - name: Build db package (TS -> JS)
         run: pnpm --filter @messaging-service/db build
 
