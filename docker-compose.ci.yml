@@ -1,14 +1,12 @@
-version: '3.8'
-
 services:
   postgres:
-    image: postgres:sha256:aedabd10a05c7304233d006a186a42d7d350b11e702d227dc09a99882dafa142
+    image: postgres@sha256:aedabd10a05c7304233d006a186a42d7d350b11e702d227dc09a99882dafa142
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: messaging_dev
     ports:
-      - "5450:5432"
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d messaging_dev -h postgres -p 5432"]
       interval: 5s
@@ -17,26 +15,8 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-  pgbouncer:
-    build:
-      context: ./pgbouncer
-      dockerfile: Dockerfile.pgbouncer
-    environment:
-      PG_USERS: "postgres:postgres"
-    ports:
-      - "6432:6432"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h pgbouncer -p 6432 -U postgres || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-    command: ["pgbouncer", "/etc/pgbouncer/pgbouncer.ini"]
-
   redis:
-    image: redis:sha256:cc2dfb8f5151da2684b4a09bd04b567f92d07591d91980eb3eca21df07e12760
+    image: redis@sha256:cc2dfb8f5151da2684b4a09bd04b567f92d07591d91980eb3eca21df07e12760
     ports:
       - "6379:6379"
     healthcheck:
@@ -46,62 +26,6 @@ services:
       retries: 12
     volumes:
       - redisdata:/data
-
-  db:
-    build:
-      context: .
-      dockerfile: ./db/Dockerfile
-    environment:
-      DATABASE_URL: postgres://postgres:postgres@pgbouncer:6432/messaging_dev?pgbouncer=true&connection_limit=1
-      REDIS_URL: redis://redis:6379
-      NODE_ENV: test
-    depends_on:
-      pgbouncer:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  dispatcher:
-    build:
-      context: .
-      dockerfile: ./dispatcher/Dockerfile
-    environment:
-      DATABASE_URL: postgres://postgres:postgres@pgbouncer:6432/messaging_dev?pgbouncer=true&connection_limit=1
-      REDIS_URL: redis://redis:6379
-      NODE_ENV: test
-    depends_on:
-      db:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-
-  scheduler:
-    build:
-      context: .
-      dockerfile: ./scheduler/Dockerfile
-    environment:
-      DATABASE_URL: postgres://postgres:postgres@pgbouncer:6432/messaging_dev?pgbouncer=true&connection_limit=1
-      REDIS_URL: redis://redis:6379
-      NODE_ENV: test
-    depends_on:
-      db:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-
-  server:
-    build:
-      context: .
-      dockerfile: ./server/Dockerfile
-    environment:
-      DATABASE_URL: postgres://postgres:postgres@pgbouncer:6432/messaging_dev?pgbouncer=true&connection_limit=1
-      REDIS_URL: redis://redis:6379
-      NODE_ENV: test
-    depends_on:
-      db:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
 
 volumes:
   pgdata:
