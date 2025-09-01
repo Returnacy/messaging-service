@@ -3,7 +3,7 @@ services:
     image: postgres@sha256:aedabd10a05c7304233d006a186a42d7d350b11e702d227dc09a99882dafa142
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: messaging_dev
     ports:
       - "5450:5432"
@@ -20,7 +20,7 @@ services:
       context: ./pgbouncer
       dockerfile: Dockerfile.pgbouncer
     environment:
-      PG_USERS: "postgres:postgres"
+      PG_USERS: ${PG_USERS:-"postgres:postgres"}
     ports:
       - "6432:6432"
     depends_on:
