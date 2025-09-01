@@ -71,6 +71,13 @@ jobs:
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
 
+      - name: Clean install
+        run: |
+          pnpm install --force
+          pnpm prisma generate --schema=./prisma/schema.prisma
+          ls -l node_modules/.prisma/client/
+        working-directory: db
+
       - name: Build project (TS -> JS)
         run: pnpm build
       
