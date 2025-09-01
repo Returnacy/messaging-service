@@ -21,20 +21,15 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Use Node.js 20 (with pnpm cache)
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
-          # Use a relative path; **/ supports monorepos
-          cache-dependency-path: '**/pnpm-lock.yaml'
 
-      - name: Enable Corepack and activate pnpm
-        run: |
-          # Pin the pnpm version you want. Replace 8.8.0 with your preferred version
-          PNPM_VERSION=8.8.0
-          corepack enable
-          corepack prepare pnpm@${PNPM_VERSION} --activate
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8.8.0 # or your preferred version
 
       - name: Verify pnpm is available
         run: |
