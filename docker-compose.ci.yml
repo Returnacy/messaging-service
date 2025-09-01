@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres@sha256:aedabd10a05c7304233d006a186a42d7d350b11e702d227dc09a99882dafa142
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -16,7 +16,7 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   pgbouncer:
-    image: edoburu/pgbouncer:1.22.1
+    image: edoburu/pgbouncer@sha256:11551161b92b1be015895a06d528342fcfc7f11b86d8bc75dcd478315da256eb
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/messaging_dev
       PG_USERS: ${PG_USERS:-"postgres:postgres"}
@@ -32,7 +32,7 @@ services:
       retries: 12
 
   redis:
-    image: redis:7-alpine
+    image: redis@sha256:cc2dfb8f5151da2684b4a09bd04b567f92d07591d91980eb3eca21df07e12760
     ports:
       - "6379:6379"
     healthcheck:
