@@ -73,10 +73,6 @@ jobs:
           docker-compose -f docker-compose.ci.yml up --build -d
         working-directory: .
 
-      - name: Wait for services to be ready
-        run: scripts/wait-for-services.sh
-        working-directory: .
-
       - name: Set DATABASE_URL & REDIS_URL for CI
         run: |
           echo "DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@127.0.0.1:${PGBOUNCER_PORT}/messaging_dev?pgbouncer=true" >> $GITHUB_ENV
