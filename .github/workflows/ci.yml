@@ -68,29 +68,12 @@ jobs:
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
 
-      - name: Install dependencies for types
+      - name: Install dependencies
         run: pnpm install
-        working-directory: types
-
-      - name: Install dependencies for utils
-        run: pnpm install
-        working-directory: utils
-
-      - name: Install dependencies for db
-        run: pnpm install
+      
+      - name: Generate Prisma client for db
+        run: pnpm --filter db prisma generate --schema=./prisma/schema.prisma
         working-directory: db
-
-      - name: Install dependencies for dispatcher
-        run: pnpm install
-        working-directory: dispatcher
-
-      - name: Install dependencies for scheduler
-        run: pnpm install
-        working-directory: scheduler
-
-      - name: Install dependencies for server
-        run: pnpm install
-        working-directory: server
 
       - name: Build db package (TS -> JS)
         run: pnpm build
