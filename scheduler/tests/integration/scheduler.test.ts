@@ -72,7 +72,7 @@ describe("scheduleDueMessages integration", () => {
     expect(jobs.length).toBe(1);
     expect(jobs[0].data).toMatchObject({
       channel: "EMAIL",
-      outboundMessageId: msg.id,
+      id: msg.id,
       payload: expect.objectContaining({
         subject: "Test",
         bodyText: "This is a test message",
