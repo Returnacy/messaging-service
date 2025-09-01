@@ -26,25 +26,27 @@ jobs:
         with:
           node-version: '20'
           cache: 'pnpm'
-          # Correct (relative) path to pnpm lockfile; use **/ for monorepos
+          # Use a relative path; **/ supports monorepos
           cache-dependency-path: '**/pnpm-lock.yaml'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          # optional: pin a pnpm version, e.g. version: 8
-          run_install: false
-
-      - name: Check pnpm and environment
+      - name: Enable Corepack and activate pnpm
         run: |
+          # Pin the pnpm version you want. Replace 8.8.0 with your preferred version
+          PNPM_VERSION=8.8.0
+          corepack enable
+          corepack prepare pnpm@${PNPM_VERSION} --activate
+
+      - name: Verify pnpm is available
+        run: |
+          echo "node: $(node -v)"
+          echo "npm: $(npm -v)"
           pnpm -v
-          node -v
-          npm -v
-          echo "PNPM store path: $(pnpm store path || echo 'unknown')"
+          which pnpm
 
       - name: Cache pnpm store (optional fallback)
         uses: actions/cache@v4
         with:
+          # pnpm store path on Linux runners
           path: ~/.local/share/pnpm/store/v3
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
@@ -69,7 +71,6 @@ jobs:
       - name: Start local stack (Postgres, PgBouncer, Redis) via docker-compose
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          # single-string of user:password pairs for entrypoint to write userlist.txt
           PG_USERS: ${{ secrets.PG_USERS }}
         run: |
           docker-compose -f docker-compose.ci.yml up --build -d
@@ -87,7 +88,6 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
 
       - name: Prisma deploy + seed (pnpm)
-        # Prisma will read DATABASE_URL from GITHUB_ENV (set above)
         run: pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
         working-directory: db
 
