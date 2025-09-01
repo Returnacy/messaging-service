@@ -96,7 +96,9 @@ jobs:
         run: pnpm --filter @messaging-service/server build
 
       - name: Run Prisma migrate + seed
-        run: pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
+        run: |
+          cd db
+          pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
 
       - name: Run tests with coverage
         env:
