@@ -20,11 +20,25 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Use Node.js 20 (with pnpm cache)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: 'pnpm'
+          cache-dependency-path: '/pnpm-lock.yaml'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Cache pnpm store (optional fallback)
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store/v3
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Cache Docker layers (optional)
         uses: actions/cache@v4
@@ -33,14 +47,6 @@ jobs:
           key: ${{ runner.os }}-docker-cache
           restore-keys: |
             ${{ runner.os }}-docker-cache
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: .
-
-      - name: Build TypeScript (so dist/index.js exists for smoke tests)
-        run: npm run build
-        working-directory: .
 
       - name: Start local stack (Postgres, PgBouncer, Redis) via docker-compose
         env:
