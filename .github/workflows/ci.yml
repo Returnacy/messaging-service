@@ -92,10 +92,6 @@ jobs:
         run: pnpm install
         working-directory: server
 
-      - name: List generated Prisma client files (db local)
-        run: ls -l node_modules/.prisma/client/
-        working-directory: db
-
       - name: Build db package (TS -> JS)
         run: pnpm build
         working-directory: .
