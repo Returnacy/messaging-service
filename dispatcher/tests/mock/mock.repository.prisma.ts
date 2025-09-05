@@ -22,7 +22,7 @@ export class MockRepo extends RepositoryPrisma {
     return message;
   }
 
-  async updateOutboundMessageOnSuccess(id: string) {
+  async updateOutboundMessageStatusToSent(id: string) {
     const message = this.messages[id]!;
     message.status = 'SENT';
   }

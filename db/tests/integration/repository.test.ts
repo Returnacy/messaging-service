@@ -104,7 +104,7 @@ describe('RepositoryPrisma Integration', () => {
       httpStatus: 200
     });
 
-    await repo.updateOutboundMessageOnSuccess(msg.id);
+    await repo.updateOutboundMessageStatusToSent(msg.id);
 
     const updated = await prisma.outboundMessage.findUnique({ where: { id: msg.id }});
     expect(updated).not.toBeNull();
@@ -239,7 +239,7 @@ test('create log + update success (integration)', async () => {
     httpStatus: 200
   });
 
-  await repo.updateOutboundMessageOnSuccess(msg.id);
+  await repo.updateOutboundMessageStatusToSent(msg.id);
 
   const updated = await prisma.outboundMessage.findUnique({ where: { id: msg.id }});
   expect(updated).not.toBeNull();

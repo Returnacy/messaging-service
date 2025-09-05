@@ -38,7 +38,7 @@ export class Processor {
       }
 
       await this.repo.createProviderRequestLog({ outboundMessageId: msg.id, providerId: msg.providerId || 'unknown', request: msg.payload, response: res, httpStatus: 200 });
-      await this.repo.updateOutboundMessageOnSuccess(msg.id);
+      await this.repo.updateOutboundMessageStatusToSent(msg.id);
       
       return { success: true, providerId: res.providerId };
     } catch (err: any) {

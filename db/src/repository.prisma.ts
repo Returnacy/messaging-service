@@ -122,7 +122,7 @@ export class RepositoryPrisma {
   /**
    * Atomic success update: set status SENT, sentAt, lastAttemptAt
    */
-  async updateOutboundMessageOnSuccess(id: string) {
+  async updateOutboundMessageStatusToSent(id: string) {
     await prisma.outboundMessage.update({
       where: { id },
       data: {
