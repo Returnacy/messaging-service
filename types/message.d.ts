@@ -3,10 +3,10 @@ import { Channel } from "./channel.js";
 
 export type Message = {
   externalId: string;
-  campaignId?: string | null | undefined;
+  campaignId?: string | null;
   recipientId: string;
   channel: Channel;
   payload: MessagePayload;
-  scheduledAt?: Date | null | undefined;
+  scheduledAt?: Date | null;
   maxAttempts: number;
 }

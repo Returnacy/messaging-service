@@ -1,8 +1,8 @@
 import { PayloadRecipient } from "./paylodRecipient.d.ts"
 
 export type MessagePayload = {
-  subject?: string | null | undefined;
-  bodyHtml?: string | null | undefined;
+  subject?: string | null;
+  bodyHtml?: string | null;
   bodyText: string;
   from: string;
   to: PayloadRecipient;
