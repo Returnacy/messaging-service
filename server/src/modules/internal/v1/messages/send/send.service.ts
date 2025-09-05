@@ -1,7 +1,7 @@
 import type { FastifyRequest } from "fastify";
 import type { SendInput } from "./send.schema.js";
 
-import { processOutboundMessage } from "@/utils/processOutboundMessage.js";
+import { processOutboundMessage } from "../../../../../utils/processOutboundMessage.js";
 
 export async function sendService(request: FastifyRequest, input: SendInput) {
   const idempotencyKey = request.headers['idempotency-key'];
