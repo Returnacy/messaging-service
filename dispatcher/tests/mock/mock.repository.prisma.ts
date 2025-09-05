@@ -25,7 +25,6 @@ export class MockRepo extends RepositoryPrisma {
   async updateOutboundMessageOnSuccess(id: string) {
     const message = this.messages[id]!;
     message.status = 'SENT';
-    message.scheduledAt = new Date();
   }
 
   async updateOutboundMessageOnFailure(id: string, attempt: number, errorMessage: string, finalFailure = false) {
