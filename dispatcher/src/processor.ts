@@ -47,7 +47,7 @@ export class Processor {
       const finalFailure = attempt >= msg.maxAttempts;
 
       await this.repo.createProviderRequestLog({ outboundMessageId: msg.id, providerId: msg.providerId || 'unknown', request: msg.payload, response: null, httpStatus: err.message || String(err) });
-      await this.repo.updateOutboundMessageOnFailure(msg.id, attempt, err.message || String(err), finalFailure);
+      await this.repo.updateOutboundMessageStatusOnFailure(msg.id, attempt, err.message || String(err), finalFailure);
       
       if (isTransient && !finalFailure) {
         // throw to let BullMQ retry (job attempts configured there)

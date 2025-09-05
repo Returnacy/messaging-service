@@ -134,10 +134,52 @@ export class RepositoryPrisma {
   }
 
   /**
+   * Atomic delivery update: set status DELIVERED, deliveredAt, lastAttemptAt on webhook event mapping
+   */
+  async updateOutboundMessageStatusToDelivered(id: string) {
+    await prisma.outboundMessage.update({
+      where: { id },
+      data: {
+        status: 'DELIVERED',
+        deliveredAt: new Date(),
+        lastAttemptAt: new Date(), // last attempt equals now
+      }
+    });
+  }
+
+  /**
+   * Atomic bounce update: set status BOUNCED, deliveredAt, lastAttemptAt on webhook event mapping
+   */
+  async updateOutboundMessageStatusToBounced(id: string) {
+    await prisma.outboundMessage.update({
+      where: { id },
+      data: {
+        status: 'BOUNCED',
+        deliveredAt: new Date(),
+        lastAttemptAt: new Date(), // last attempt equals now
+      }
+    });
+  }
+
+  /**
+   * Atomic failure update: set status FAILED, lastAttemptAt on webhook event mapping
+   * or other failure indication from provider
+   */
+  async updateOutboundMessageStatusToFailed(id: string) {
+    await prisma.outboundMessage.update({
+      where: { id },
+      data: {
+        status: 'FAILED',
+        lastAttemptAt: new Date()
+      }
+    });
+  }
+
+  /**
    * Update on failure: increment attempt, set lastError, optionally set final FAILED status.
    * Uses conditional update if necessary for optimistic control.
    */
-  async updateOutboundMessageOnFailure(id: string, attempt: number, errorMessage: string, finalFailure = false) {
+  async updateOutboundMessageStatusOnFailure(id: string, attempt: number, errorMessage: string, finalFailure = false) {
     const data: Prisma.OutboundMessageUpdateInput = {
       attempt,
       lastError: errorMessage,

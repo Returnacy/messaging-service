@@ -27,7 +27,7 @@ export class MockRepo extends RepositoryPrisma {
     message.status = 'SENT';
   }
 
-  async updateOutboundMessageOnFailure(id: string, attempt: number, errorMessage: string, finalFailure = false) {
+  async updateOutboundMessageStatusOnFailure(id: string, attempt: number, errorMessage: string, finalFailure = false) {
     const message = this.messages[id]!;
     message.attempt = attempt;
     message.status = finalFailure ? 'FAILED' : 'QUEUED';
