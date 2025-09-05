@@ -1,6 +1,6 @@
 import type { FastifyRequest } from "fastify";
 import type { BatchInput } from "./batch.schema.js";
-import { processOutboundMessage } from "@/utils/processOutboundMessage.js";
+import { processOutboundMessage } from "../../../../../utils/processOutboundMessage.js";
 import type { OutboundMessage } from "@messaging-service/types/outboundMessage.js";
 
 export async function batchService(request: FastifyRequest, input: BatchInput) {
