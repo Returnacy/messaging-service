@@ -14,8 +14,7 @@
   },
   "references": [
     { "path": "../types" },
-    { "path": "../db" },
-    { "path": "../utils" }
+    { "path": "../db" }
   ],
   "include": ["src", "tests"],
   "exclude": ["dist"]
