@@ -70,7 +70,8 @@ describe("scheduleDueMessages integration", () => {
     // Check that a job was added to the queue
     const jobs = await testQueue.getJobs(["wait", "delayed", "active"]);
     expect(jobs.length).toBe(1);
-    expect(jobs[0].data).toMatchObject({
+  const job = jobs[0]!; // ensured by the length expectation above
+  expect(job.data).toMatchObject({
       channel: "EMAIL",
       id: msg.id,
       payload: expect.objectContaining({
