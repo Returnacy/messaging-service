@@ -59,15 +59,7 @@ export class RepositoryPrisma {
     return this.mapDbToOutbound(db);
   }
 
-  async getOutboundMessageFromExternalId(externalId: string): Promise<OutboundMessage | null> {
-    const db = await prisma.outboundMessage.findUnique({
-      where: { externalId },
-      include: { payload: true, provider: true }
-    });
-
-    if (!db) return null;
-    return this.mapDbToOutbound(db);
-  }
+  // use getOutboundMessageByExternalId below
 
   mapDbToOutbound(db: DBOutbound): OutboundMessage {
     return {
@@ -117,17 +109,7 @@ export class RepositoryPrisma {
     });
   }
 
-  /**
-   * Atomic update: set externalId
-   */
-  async updateOutboundMessageExternalId(id: string, externalId: string): Promise<OutboundMessage> {
-    const msg = await prisma.outboundMessage.update({
-      where: { id },
-      data: { externalId },
-      include: { payload: true, provider: true }
-    });
-    return this.mapDbToOutbound(msg);
-  }
+  // externalId update implemented later with optional arg
 
   /**
    * Atomic update: set status SENDING
@@ -255,6 +237,24 @@ export class RepositoryPrisma {
     return this.mapDbToOutbound(db);
   }
 
+  // aliases not needed; concrete methods exist above
+
+  /**
+   * Set provider external id on the outbound message if provided, and return the mapped message
+   */
+  async updateOutboundMessageExternalId(id: string, externalId?: string | null): Promise<OutboundMessage> {
+    if (!externalId) {
+      const existing = await this.getOutboundMessage(id);
+      if (!existing) throw new Error('OutboundMessage not found: ' + id);
+      return existing;
+    }
+    const msg = await prisma.outboundMessage.update({
+      where: { id },
+      data: { externalId: externalId as string },
+      include: { payload: true, provider: true }
+    });
+    return this.mapDbToOutbound(msg);
+  }
   /**
    * Optional: helper to claim a message atomically by id only if status is QUEUED or SENDING.
    * This prevents two workers processing the same message concurrently.
