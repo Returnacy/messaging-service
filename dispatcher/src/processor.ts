@@ -37,16 +37,16 @@ export class Processor {
           throw new Error(`Unsupported channel: ${msg.channel}`);
       }
 
-      await this.repo.createProviderRequestLog({ outboundMessageId: msg.id, providerId: msg.providerId || 'unknown', request: msg.payload, response: res, httpStatus: 200 });
+      await this.repo.createProviderRequestLog({ outboundMessageId: res.outboundMessageId, providerId: res.providerId, request: res.requestPayload, response: res.responsePayload, httpStatus: res.httpStatus });
       await this.repo.updateOutboundMessageStatusToSent(msg.id);
-      
-      return { success: true, providerId: res.providerId };
+      msg = await this.repo.updateOutboundMessageExternalId(msg.id, res.providerMessageId);
+
+      return { success: true, providerId: msg.providerId };
     } catch (err: any) {
       const isTransient = Processor.isTransientError(err);
       const attempt = msg.attempt + 1;
       const finalFailure = attempt >= msg.maxAttempts;
 
-      await this.repo.createProviderRequestLog({ outboundMessageId: msg.id, providerId: msg.providerId || 'unknown', request: msg.payload, response: null, httpStatus: err.message || String(err) });
       await this.repo.updateOutboundMessageStatusOnFailure(msg.id, attempt, err.message || String(err), finalFailure);
       
       if (isTransient && !finalFailure) {
@@ -72,5 +72,57 @@ export class Processor {
       return true;
 
     return false;
+  }
+
+  /**
+   * Handle provider callback/update jobs enqueued by server webhooks
+   * Payload shape is intentionally generic to support multiple providers
+   */
+  async processDeliveryReceipt(payload: {
+    provider: string;
+    eventType: string;
+    status: string;
+    timestamp?: string | number | Date;
+    raw: any;
+    providerMessageId: string;
+  }) {
+    if (!payload || !payload.providerMessageId) {
+      throw new Error('Invalid update payload: missing providerMessageId');
+    }
+
+    const msg = await this.repo.getOutboundMessageByExternalId(payload.providerMessageId);
+    if (!msg) {
+      throw new Error('OutboundMessage not found for providerMessageId: ' + payload.providerMessageId);
+    }
+
+    // Store receipt
+    await this.repo.createDeliveryReceipt({
+      outboundMessageId: msg.id,
+      provider: msg.provider.id,
+      eventType: "ProviderMessageUpdate",
+      status: payload.status,
+      timestamp: payload.timestamp as Date || new Date(),
+      raw: payload.raw ?? {},
+      providerMessageId: payload.providerMessageId ?? null,
+    });
+
+    // Map provider status/event to MessageStatus
+    const normalized = (payload.status || payload.eventType || '').toLowerCase();
+
+    if (['delivered', 'success', 'sent'].includes(normalized)) {
+      await this.repo.updateOutboundMessageStatusToDelivered(msg.id);
+      return { updated: true, status: 'DELIVERED' };
+    }
+    if (['bounce', 'bounced'].includes(normalized)) {
+      await this.repo.updateOutboundMessageStatusToBounced(msg.id);
+      return { updated: true, status: 'BOUNCED' };
+    }
+    if (['failed', 'undeliverable', 'error'].includes(normalized)) {
+      await this.repo.updateOutboundMessageStatusToFailed(msg.id);
+      return { updated: true, status: 'FAILED' };
+    }
+
+    // Unknown: keep as is, but record receipt
+    return { updated: false, reason: 'unknown-status', normalized };
   }
 }

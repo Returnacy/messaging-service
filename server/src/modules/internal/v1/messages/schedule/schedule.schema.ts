@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
 export const scheduleSchema = z.object({
-  campaignId: z.uuid().optional(),
+  campaignId: z.uuid().nullable(),
   recipientId: z.uuid(),
   channel: z.enum(['EMAIL', 'SMS']),
   payload: z.object({
-    subject: z.string().min(2).max(100),
-    bodyHtml: z.string().min(2).max(1000).optional(),
+    subject: z.string().min(2).max(100).nullable(),
+    bodyHtml: z.string().min(2).max(1000).nullable(),
     bodyText: z.string().min(2).max(1000),
     from: z.string().min(2).max(100),
     to: z.object({

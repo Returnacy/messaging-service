@@ -59,6 +59,16 @@ export class RepositoryPrisma {
     return this.mapDbToOutbound(db);
   }
 
+  async getOutboundMessageFromExternalId(externalId: string): Promise<OutboundMessage | null> {
+    const db = await prisma.outboundMessage.findUnique({
+      where: { externalId },
+      include: { payload: true, provider: true }
+    });
+
+    if (!db) return null;
+    return this.mapDbToOutbound(db);
+  }
+
   mapDbToOutbound(db: DBOutbound): OutboundMessage {
     return {
       id: db.id,
@@ -105,6 +115,18 @@ export class RepositoryPrisma {
         httpStatus: opts.httpStatus ?? null,
       }
     });
+  }
+
+  /**
+   * Atomic update: set externalId
+   */
+  async updateOutboundMessageExternalId(id: string, externalId: string): Promise<OutboundMessage> {
+    const msg = await prisma.outboundMessage.update({
+      where: { id },
+      data: { externalId },
+      include: { payload: true, provider: true }
+    });
+    return this.mapDbToOutbound(msg);
   }
 
   /**
@@ -196,6 +218,41 @@ export class RepositoryPrisma {
       where: { id },
       data
     });
+  }
+
+  /**
+   * Create a delivery receipt row for provider callbacks/webhooks
+   */
+  async createDeliveryReceipt(opts: {
+    outboundMessageId: string;
+    provider: string;
+    eventType: string;
+    status: string;
+    timestamp?: Date;
+    raw: any;
+    providerMessageId?: string | null;
+  }) {
+    const dr = await prisma.deliveryReceipt.create({
+      data: {
+        outboundMessageId: opts.outboundMessageId,
+        provider: opts.provider,
+        eventType: opts.eventType,
+        status: opts.status,
+        timestamp: opts.timestamp ?? new Date(),
+        raw: opts.raw ?? {},
+        providerMessageId: opts.providerMessageId ?? null,
+      }
+    });
+    return dr;
+  }
+
+  async getOutboundMessageByExternalId(externalId: string): Promise<OutboundMessage | null> {
+    const db = await prisma.outboundMessage.findUnique({
+      where: { externalId },
+      include: { payload: true, provider: true }
+    });
+    if (!db) return null;
+    return this.mapDbToOutbound(db);
   }
 
   /**
