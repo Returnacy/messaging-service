@@ -4,7 +4,7 @@ import type { Processor } from './processor.js';
 const WORKER_MAX_ATTEMPTS = 5;
 const WORKER_BACKOFF_DELAY_MS = 2000;
 
-export function createWorker(
+export function createMessageWorker(
   queueName: string,
   processor: Processor,
   logger: any,
@@ -39,6 +39,27 @@ export function createWorker(
         max: Number(process.env.WORKER_MAX_ATTEMPTS || WORKER_MAX_ATTEMPTS),
         duration: Number(process.env.WORKER_BACKOFF_DELAY_MS || WORKER_BACKOFF_DELAY_MS)
       }
+    }
+  );
+}
+
+export function createReceiptWorker(
+  queueName: string,
+  processor: Processor,
+  logger: any,
+  connection: any,
+  concurrency: number = 5,
+) {
+  return new Worker(
+    queueName,
+    async job => {
+      const result = await processor.processDeliveryReceipt(job.data);
+      logger.info({ jobId: job.id, queue: 'messages.updates' }, 'processed update job');
+      return result;
+    },
+    {
+      connection,
+      concurrency: Number(process.env.WORKER_CONCURRENCY || concurrency),
     }
   );
 }

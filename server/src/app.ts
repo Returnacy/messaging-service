@@ -8,6 +8,7 @@ import prismaRepositoryPlugin from './plugins/prismaRepositoryPlugin.js';
 import redisConnectionPlugin from './plugins/redisConnectionPlugin.js';
 
 import { messagesRoutes } from './modules/internal/v1/messages/index.route.js';
+import { webhooksRoutes } from './modules/webhooks/index.route.js';
 
 import { CorsError } from './errors/index.error.js';
 import legacyAuthPlugin from './plugins/legacyAuthPlugin.js';
@@ -48,6 +49,7 @@ async function main() {
   server.register(redisConnectionPlugin);
 
   server.register(messagesRoutes, { prefix: '/api/v1/messages' });
+  server.register(webhooksRoutes, { prefix: '/webhooks' });
 
 
   server.addHook('onError', async (request, reply, error) => {

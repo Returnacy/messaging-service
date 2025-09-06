@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { Processor } from './processor.js';
 import { createQueue } from './queue.js';
-import { createWorker } from './worker.js';
+import { createMessageWorker, createReceiptWorker } from './worker.js';
 import { RepositoryPrisma } from '@messaging-service/db';
 import { Redis } from "ioredis";
 import pino from 'pino';
@@ -24,9 +24,11 @@ async function start() {
 
   const dispatchQueue = createQueue('messages.dispatch', connection);
   const retriesQueue = createQueue('messages.retries', connection);
+  const updatesQueue = createQueue('messages.updates', connection);
 
-  const dispatchWorker = createWorker('messages.dispatch', processor, logger, connection, 5);
-  const retriesWorker = createWorker('messages.retries', processor, logger, connection, 2);
+  const dispatchWorker = createMessageWorker('messages.dispatch', processor, logger, connection, 5);
+  const retriesWorker = createMessageWorker('messages.retries', processor, logger, connection, 2);
+  const updatesWorker = createReceiptWorker('messages.updates', processor, logger, connection, 2);
 
   logger.info('All workers started');
 }

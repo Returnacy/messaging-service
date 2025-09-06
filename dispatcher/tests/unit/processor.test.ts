@@ -45,7 +45,14 @@ describe("Processor", () => {
 
     repo.messages[msg.id] = msg;
 
-    vi.mocked(sendWithResendAdapter).mockResolvedValue(true);
+    vi.mocked(sendWithResendAdapter).mockResolvedValue({
+      outboundMessageId: msg.id,
+      providerId: msg.providerId || 'resend',
+      providerMessageId: 'external-email-123',
+      requestPayload: msg,
+      responsePayload: {},
+      httpStatus: 200,
+    } as any);
 
     const res = await proc.processJob(msg);
     expect(res.success).toBe(true);
@@ -107,7 +114,14 @@ describe("Processor", () => {
 
     repo.messages[msg.id] = msg;
 
-    vi.mocked(sendWithDecisionTelecomAdapter).mockResolvedValue(true);
+    vi.mocked(sendWithDecisionTelecomAdapter).mockResolvedValue({
+      outboundMessageId: msg.id,
+      providerId: msg.providerId || 'unknown',
+      providerMessageId: 'external-123',
+      requestPayload: msg,
+      responsePayload: {},
+      httpStatus: 200
+    });
 
     const res = await proc.processJob(msg);
     expect(res.success).toBe(true);

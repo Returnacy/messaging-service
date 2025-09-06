@@ -6,8 +6,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@tests/*": ["tests/*"],
-      "redlock": ["node_modules/redlock/dist/index.d.ts"]
+      "@tests/*": ["tests/*"]
     },
     "types": ["node"], // remove this line if @types/node installed and you prefer auto detection
     "tsBuildInfoFile": "dist/.tsbuildinfo",
@@ -15,8 +14,7 @@
   },
   "references": [
     { "path": "../types" },
-    { "path": "../db" },
-    { "path": "../utils" }
+    { "path": "../db" }
   ],
   "include": ["src", "tests"],
   "exclude": ["dist"]

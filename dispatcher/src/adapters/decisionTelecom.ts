@@ -1,17 +1,18 @@
 import type { OutboundMessage } from "@messaging-service/types";
+import type { ProviderResponse } from "./types/providerResponse.js";
 import type { decisionTelecomResponse } from "./types/decisionTelecomResponse.js";
 
 const DECISIONTELECOM_SMS_VALIDITY_PERIOD = 120;
 
-export async function sendWithDecisionTelecomAdapter(message: OutboundMessage): Promise<boolean> {
+export async function sendWithDecisionTelecomAdapter(message: OutboundMessage): Promise<ProviderResponse> {
   if (!message.payload.to.phone) {
     console.error(`${message.payload.to.name}, no phone number provided`);
-    return false;
+    throw new Error(`Failed to send SMS via DecisionTelecom: no phone number provided`);
   }
 
   const msg = JSON.stringify({
-    "to": message.payload.to.phone,
-    "from": message.payload.from,
+    "phone": message.payload.to.phone,
+    "sender": message.payload.from,
     "text": message.payload.bodyText,
     "validity_period": DECISIONTELECOM_SMS_VALIDITY_PERIOD,
   });
@@ -29,8 +30,15 @@ export async function sendWithDecisionTelecomAdapter(message: OutboundMessage): 
 
   if (!["ACCEPTD", "ENROUTE", "DELIVRD"].includes(response.message_data[0].status)) {
     console.error("Failed to send SMS via DecisionTelecom", response.message_data[0].status);
-    return false;
+    throw new Error(`Failed to send SMS via DecisionTelecom: ${response.message_data[0].status}`);
   }
 
-  return true;
+  return {
+    outboundMessageId: message.id,
+    providerId: message.providerId || 'unknown',
+    providerMessageId: response.message_data[0].message_id.toString(),
+    requestPayload: msg,
+    responsePayload: response,
+    httpStatus: 200
+  } as ProviderResponse;
 }

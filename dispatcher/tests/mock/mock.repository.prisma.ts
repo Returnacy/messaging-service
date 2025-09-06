@@ -22,15 +22,22 @@ export class MockRepo extends RepositoryPrisma {
     return message;
   }
 
-  async updateOutboundMessageOnSuccess(id: string) {
+  async updateOutboundMessageStatusToSent(id: string) {
     const message = this.messages[id]!;
     message.status = 'SENT';
-    message.scheduledAt = new Date();
   }
 
-  async updateOutboundMessageOnFailure(id: string, attempt: number, errorMessage: string, finalFailure = false) {
+  async updateOutboundMessageStatusOnFailure(id: string, attempt: number, errorMessage: string, finalFailure = false) {
     const message = this.messages[id]!;
     message.attempt = attempt;
     message.status = finalFailure ? 'FAILED' : 'QUEUED';
+  }
+
+  async updateOutboundMessageExternalId(id: string, externalId?: string | null) {
+    const message = this.messages[id]!;
+    if (externalId) {
+      (message as any).externalId = externalId;
+    }
+    return message;
   }
 }
