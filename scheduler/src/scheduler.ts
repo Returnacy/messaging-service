@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import { prisma } from '@messaging-service/db';
+import type { OutboundMessage } from '@messaging-service/types';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import pino from 'pino';
@@ -23,7 +24,7 @@ const dispatchQueue = new Queue('messages.dispatch', { connection });
  * Atomically claim up to BATCH_SIZE due messages using SKIP LOCKED,
  * set them to QUEUED, and return their ids.
  */
-async function claimDueMessageIds(now: Date, batchSize: number): Promise<string[]> {
+async function claimDueMessages(now: Date, batchSize: number): Promise<OutboundMessage[]> {
   // Prisma model is OutboundMessage => default table "OutboundMessage"
   // Use CTE + FOR UPDATE SKIP LOCKED to safely claim rows without external locks.
   const rows = await prisma.$queryRaw<{ id: string }[]>`
@@ -41,21 +42,60 @@ async function claimDueMessageIds(now: Date, batchSize: number): Promise<string[
     WHERE om.id = cte.id
     RETURNING om.id;
   `;
-  return rows.map(r => r.id);
+  if (!rows.length) return [];
+
+  const ids = rows.map(r => r.id);
+  const dbMessages = await prisma.outboundMessage.findMany({
+    where: { id: { in: ids } },
+    include: { payload: true, provider: true },
+    orderBy: { scheduledAt: 'asc' }
+  });
+
+  // Map DB records to OutboundMessage type
+  const messages: OutboundMessage[] = dbMessages.map((db: any) => ({
+    id: db.id,
+    externalId: db.externalId,
+    campaignId: db.campaignId ?? undefined,
+    recipientId: db.recipientId,
+    channel: db.channel,
+    providerId: db.providerId,
+    payload: {
+      id: db.payload.id,
+      subject: db.payload.subject ?? null,
+      bodyText: db.payload.bodyText ?? null,
+      bodyHtml: db.payload.bodyHtml ?? null,
+      to: db.payload.to as any,
+      from: db.payload.from,
+      metadata: db.payload.metadata ?? undefined,
+      createdAt: db.payload.createdAt,
+    } as any,
+    provider: {
+      id: db.provider.id,
+      name: db.provider.name,
+      channel: db.provider.channel,
+      credentialRef: db.provider.credentialRef,
+    },
+    status: db.status,
+    attempt: db.attempt,
+    maxAttempts: db.maxAttempts,
+    scheduledAt: db.scheduledAt ?? null,
+  }));
+
+  return messages;
 }
 
 export async function scheduleDueMessages() {
   const now = new Date();
 
-  const ids = await claimDueMessageIds(now, BATCH_SIZE);
-  if (ids.length === 0) return;
+  const messages = await claimDueMessages(now, BATCH_SIZE);
+  if (messages.length === 0) return;
 
   // Enqueue minimal payload: only id. Dispatcher fetches full message.
   await dispatchQueue.addBulk(
-    ids.map(id => ({ name: 'dispatch', data: { id } }))
+    messages.map(m => ({ name: 'dispatch', data: m }))
   );
 
-  logger.info({ count: ids.length }, 'Scheduled messages');
+  logger.info({ count: messages.length }, 'Scheduled messages');
 }
 
 // Start in cron mode or one-off mode to enable scale-to-zero on Railway.
