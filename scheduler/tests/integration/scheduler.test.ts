@@ -75,8 +75,11 @@ describe("scheduleDueMessages integration", () => {
         channel: "EMAIL",
         id: msg.id,
         payload: expect.objectContaining({
+          id: expect.any(String),
           subject: "Test",
+          bodyHtml: null,
           bodyText: "This is a test message",
+          from: "sender@example.com",
           to: { email: "test@example.com" },
           createdAt: expect.any(String),
         }),
