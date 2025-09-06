@@ -70,18 +70,18 @@ describe("scheduleDueMessages integration", () => {
     // Check that a job was added to the queue
     const jobs = await testQueue.getJobs(["wait", "delayed", "active"]);
     expect(jobs.length).toBe(1);
-  const job = jobs[0]!; // ensured by the length expectation above
-  expect(job.data).toMatchObject({
-      channel: "EMAIL",
-      id: msg.id,
-      payload: expect.objectContaining({
-        subject: "Test",
-        bodyText: "This is a test message",
-        to: { email: "test@example.com" },
-        createdAt: expect.any(String),
-      }),
-      provider: expect.anything(),
-    });
+    const job = jobs[0]!; // ensured by the length expectation above
+    expect(job.data).toMatchObject({
+        channel: "EMAIL",
+        id: msg.id,
+        payload: expect.objectContaining({
+          subject: "Test",
+          bodyText: "This is a test message",
+          to: { email: "test@example.com" },
+          createdAt: expect.any(String),
+        }),
+        provider: expect.anything(),
+      });
 
     // Optionally, check DB status update
     const updated = await prisma.outboundMessage.findUnique({ where: { id: msg.id } });
