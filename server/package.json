@@ -23,6 +23,7 @@
     "@messaging-service/db": "workspace:*",
     "@messaging-service/types": "workspace:*",
     "@messaging-service/utils": "workspace:*",
+    "bullmq": "^5.58.0",
     "fastify": "^5.5.0",
     "fastify-plugin": "^5.0.1",
     "tsconfig-paths": "^4.2.0",
