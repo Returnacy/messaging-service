@@ -67,6 +67,7 @@ async function claimDueMessages(now: Date, batchSize: number): Promise<OutboundM
       to: db.payload.to as any,
       from: db.payload.from,
       metadata: db.payload.metadata ?? undefined,
+      createdAt: db.payload.createdAt,
     } as any,
     provider: {
       id: db.provider.id,
