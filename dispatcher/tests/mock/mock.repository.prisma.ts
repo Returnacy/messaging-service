@@ -32,4 +32,12 @@ export class MockRepo extends RepositoryPrisma {
     message.attempt = attempt;
     message.status = finalFailure ? 'FAILED' : 'QUEUED';
   }
+
+  async updateOutboundMessageExternalId(id: string, externalId?: string | null) {
+    const message = this.messages[id]!;
+    if (externalId) {
+      (message as any).externalId = externalId;
+    }
+    return message;
+  }
 }
