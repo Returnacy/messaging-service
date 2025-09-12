@@ -4,7 +4,7 @@ import { scheduleHandler } from "./schedule.controller.js";
 
 export async function scheduleRoutes(server: FastifyInstance) {
   server.post('/', {
-    preHandler: requireRole("send"),
+    preHandler: requireRole('send', 'messaging-service'),
     handler: scheduleHandler
   });
 }
