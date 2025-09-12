@@ -4,7 +4,7 @@ import { sendHandler } from "./send.controller.js";
 
 export async function sendRoutes(server: FastifyInstance) {
   server.post('/', {
-    preHandler: requireRole("send"),
+    preHandler: requireRole('send', 'messaging-service'),
     handler: sendHandler
   });
 }

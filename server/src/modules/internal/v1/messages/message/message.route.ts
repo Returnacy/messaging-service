@@ -4,7 +4,7 @@ import { messageHandler } from "./message.controller.js";
 
 export async function messageRoutes(server: FastifyInstance) {
   server.post('/', {
-    preHandler: requireRole("read"),
+    preHandler: requireRole('read', 'messaging-service'),
     handler: messageHandler
   });
 }
