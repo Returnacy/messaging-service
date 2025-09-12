@@ -35,6 +35,6 @@ describe('webhook services', () => {
     await resendService(req, input);
     const { getQueue } = await import('@messaging-service/utils');
     const q = vi.mocked(getQueue).mock.results.at(-1)!.value as any;
-    expect(q.add).toHaveBeenCalledWith('decisiontelecom', expect.objectContaining({ providerMessageId: 'em_1', status: 'BOUNCED' }));
+    expect(q.add).toHaveBeenCalledWith('resend', expect.objectContaining({ providerMessageId: 'em_1', status: 'BOUNCED' }));
   });
 });

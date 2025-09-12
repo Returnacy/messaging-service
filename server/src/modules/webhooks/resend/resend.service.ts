@@ -20,7 +20,7 @@ export async function resendService(request: FastifyRequest, input: ResendReceip
 
   const status = translateToStatus(input.type);
 
-  queue.add('decisiontelecom', {
+  queue.add('resend', {
     providerMessageId: input.data.email_id,
     status: status,
     timestamp: Date.now(),
