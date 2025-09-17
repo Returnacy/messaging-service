@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const scheduleSchema = z.object({
+export const messagesSchema = z.object({
   campaignId: z.uuid().nullable(),
   recipientId: z.uuid(),
   channel: z.enum(['EMAIL', 'SMS']),
@@ -15,8 +15,8 @@ export const scheduleSchema = z.object({
       name: z.string().min(2).max(100),
     }),
   }),
-  scheduledAt: z.date(),
+  scheduledAt: z.date().nullable(),
   maxAttempts: z.number().min(1).default(1),
 });
 
-export type ScheduleInput = z.infer<typeof scheduleSchema>;
+export type MessagesInput = z.infer<typeof messagesSchema>;

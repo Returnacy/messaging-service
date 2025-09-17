@@ -3,7 +3,7 @@ import { requireRole } from '../../../../../utils/authGuards.js';
 import { messageHandler } from "./message.controller.js";
 
 export async function messageRoutes(server: FastifyInstance) {
-  server.post('/', {
+  server.post('/:id', {
     preHandler: requireRole('read', 'messaging-service'),
     handler: messageHandler
   });

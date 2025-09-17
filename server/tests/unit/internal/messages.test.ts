@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { describe, it, expect, vi } from 'vitest';
 import type { FastifyRequest } from 'fastify';
-import { sendService } from '@/modules/internal/v1/messages/send/send.service.js';
-import { scheduleService } from '@/modules/internal/v1/messages/schedule/schedule.service.js';
+import { messagesService } from '@/modules/internal/v1/messages/messages.service.js';
 import { batchService } from '@/modules/internal/v1/messages/batch/batch.service.js';
+import { processOutboundMessage } from '@/utils/processOutboundMessage.js';
 
 vi.mock('@/utils/processOutboundMessage.js', () => ({
   processOutboundMessage: vi.fn(async (_req, _key, _input) => ({ id: 'm1', status: 'QUEUED' })),
@@ -24,20 +24,20 @@ describe('messages services', () => {
     } as unknown as FastifyRequest;
   };
 
-  it('sendService requires idempotency-key header', async () => {
+  it('messagesService requires idempotency-key header', async () => {
     const req = makeReq({});
-    await expect(sendService(req, {} as any)).rejects.toThrow('Idempotency key is required');
+    await expect(messagesService(req, {} as any)).rejects.toThrow('Idempotency key is required');
   });
 
-  it('sendService processes message with idempotency-key', async () => {
+  it('messagesService processes message with idempotency-key', async () => {
     const req = makeReq({ 'idempotency-key': 'k1' });
-    const res = await sendService(req, {} as any);
+    const res = await messagesService(req, {} as any);
     expect(res).toEqual({ messageId: 'm1' });
   });
 
-  it('scheduleService creates idempotency key and message', async () => {
+  it('messagesService creates idempotency key and message', async () => {
     const req = makeReq({ 'idempotency-key': 'k2' });
-    const res = await scheduleService(req, {
+    const res = await messagesService(req, {
       campaignId: null,
       recipientId: 'c2c5d2f4-8d6a-4c1a-9b2b-1a2b3c4d5e6f',
       channel: 'EMAIL',
@@ -54,9 +54,10 @@ describe('messages services', () => {
     expect(res).toEqual({ messageId: 'm1' });
   });
 
-  it('scheduleService fails when idempotencyKey not created', async () => {
+  it('messagesService fails when idempotencyKey not created', async () => {
+    vi.mocked(processOutboundMessage).mockRejectedValueOnce(new Error('Failed to create idempotency key'));
     const req = makeReq({ 'idempotency-key': 'k3' }, { createIdempotencyKey: vi.fn().mockResolvedValue(null) });
-    await expect(scheduleService(req, {} as any)).rejects.toThrow('Failed to create idempotency key');
+    await expect(messagesService(req, {} as any)).rejects.toThrow('Failed to create idempotency key');
   });
 
   it('batchService requires array of idempotency keys', async () => {
