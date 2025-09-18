@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { sendSchema } from '../send/send.schema.js';
+import { messagesSchema } from '../messages.schema.js';
 
-export const batchSchema = z.array(sendSchema);
+export const batchSchema = z.array(messagesSchema);
 
 export type BatchInput = z.infer<typeof batchSchema>;

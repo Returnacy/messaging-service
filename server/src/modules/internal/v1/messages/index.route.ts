@@ -1,11 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 
-import { sendRoutes } from "./send/send.route.js";
-import { scheduleRoutes } from './schedule/schedule.route.js';
+import { messagesRoute } from "./messages.route.js";
 import { batchRoutes } from './batch/batch.route.js';
+import { messageRoutes } from './message/message.route.js';
 
 export async function messagesRoutes(server: FastifyInstance) {
-  server.register(sendRoutes, { prefix: '/send' });
-  server.register(scheduleRoutes, { prefix: '/schedule' });
+  server.register(messagesRoute);
   server.register(batchRoutes, { prefix: '/batch' });
+  server.register(messageRoutes);
 }
