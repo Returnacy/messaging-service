@@ -1,8 +1,8 @@
 import type { FastifyRequest } from "fastify";
-import type { ResendReceiptInput } from "./resend.schema.js";
+import type { ResendReceipt } from "@messaging-service/types";
 import { getQueue } from "@messaging-service/utils";
 
-export async function resendService(request: FastifyRequest, input: ResendReceiptInput) {
+export async function resendService(request: FastifyRequest, input: ResendReceipt) {
   const queue = getQueue('messages.updates', request.server.redisConnection);
 
   const translateToStatus = (status: string) => {

@@ -1,5 +1,4 @@
-export type PayloadRecipient = {
-  name: string;
-  email?: string | undefined | null;
-  phone?: string | undefined | null;
-}
+import { z } from 'zod';
+import { payloadRecipientSchema } from './zod/payloadRecipientSchema.js';
+
+export type PayloadRecipient = z.infer<typeof payloadRecipientSchema>;

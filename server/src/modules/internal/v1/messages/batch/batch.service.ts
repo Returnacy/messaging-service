@@ -1,9 +1,9 @@
 import type { FastifyRequest } from "fastify";
-import type { BatchInput } from "./batch.schema.js";
+import type { Batch } from "@messaging-service/types";
 import { processOutboundMessage } from "../../../../../utils/processOutboundMessage.js";
 import type { OutboundMessage } from "@messaging-service/types/outboundMessage.js";
 
-export async function batchService(request: FastifyRequest, input: BatchInput) {
+export async function batchService(request: FastifyRequest, input: Batch) {
   const idempotencyKey = request.headers['idempotency-key'];
   const outboundMsg: OutboundMessage[] = [];
 

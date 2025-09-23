@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
-import { resendReceiptSchema } from './resend.schema.js';
+import { resendReceiptSchema } from '@messaging-service/types';
 import { resendService } from './resend.service.js';
 
 export async function resendHandler(request: FastifyRequest, reply: FastifyReply) {
