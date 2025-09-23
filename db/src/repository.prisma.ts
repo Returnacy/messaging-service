@@ -265,9 +265,8 @@ export class RepositoryPrisma {
     // Prisma has no direct update where returning count; use updateMany to perform conditional update and inspect count
     const res = await prisma.outboundMessage.updateMany({
       where: { id, status: expectedStatus },
-      data: { status: 'SENDING' }
+      data: { status: 'SENDING', updatedAt: new Date() }
     });
-    // res.count === 1 means we successfully transitioned status -> SENDING
     return res.count === 1;
   }
 }
