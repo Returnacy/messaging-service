@@ -31,9 +31,11 @@ async function main() {
       }
 
       if (!origin)
-        cb(null, true);
-      else
-        cb(new CorsError('Not allowed by CORS'), true);
+        return cb(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return cb(null, true);
+      }
+      return cb(new CorsError('Not allowed by CORS'), false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'OPTIONS', 'DELETE'],
