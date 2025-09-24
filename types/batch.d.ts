@@ -1,4 +1,4 @@
 import { z } from 'zod';
 import { batchSchema } from './zod/batchSchema.js';
 
-export type BatchInput = z.infer<typeof batchSchema>;
+export type Batch = z.infer<typeof batchSchema>;

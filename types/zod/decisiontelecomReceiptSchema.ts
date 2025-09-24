@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const decisionTelecomReceiptSchema = z.object({
+export const decisiontelecomReceiptSchema = z.object({
   message_id: z.string(),
   time_delivery: z.string().refine((val: any) => !isNaN(Date.parse(val)), {
     message: 'Invalid date format',

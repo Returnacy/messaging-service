@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { messagePayloadSchema } from './messagePayloadSchema.js';
 import type { Channel } from '../channel.js';
 
-export const messagesSchema = z.object({
+export const messageSchema = z.object({
   campaignId: z.uuid().nullable(),
   recipientId: z.uuid(),
   channel: z.enum(['EMAIL', 'SMS']) as z.ZodType<Channel>,
