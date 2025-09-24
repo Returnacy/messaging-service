@@ -11,10 +11,18 @@ type DBOutbound = Prisma.OutboundMessageGetPayload<{
   include: { payload: true, provider: true };
 }>;
 
+const ID_KEY_TTL_SECONDS = 30; // 30 seconds
+
 export class RepositoryPrisma {
 
   async createIdempotencyKey(key: string): Promise<any> {
-    const expirationDate = new Date(Date.now() + 1000 * 30); // 30 seconds
+    const expirationDate = new Date(Date.now() + 1000 * ID_KEY_TTL_SECONDS);
+    const check = await prisma.idempotencyKey.findUnique({
+      where: { key }
+    });
+    if (check)
+      throw new Error('Idempotency key already exists');
+
     const idempotencyKey = await prisma.idempotencyKey.create({
       data: { 
         key: key,
@@ -55,6 +63,15 @@ export class RepositoryPrisma {
       include: { payload: true, provider: true }
     });
 
+    if (!db) return null;
+    return this.mapDbToOutbound(db);
+  }
+
+  async getOutboundMessageByIdempotencyKey(key: string): Promise<OutboundMessage | null> {
+    const db = await prisma.outboundMessage.findFirst({
+      where: { idempotencyKey: key },
+      include: { payload: true, provider: true }
+    });
     if (!db) return null;
     return this.mapDbToOutbound(db);
   }
