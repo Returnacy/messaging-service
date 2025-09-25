@@ -1,11 +1,11 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
-import { decisionTelecomReceiptSchema } from './decisiontelecom.schema.js';
+import { decisiontelecomReceiptSchema } from '@messaging-service/types';
 import { decisionTelecomService } from './decisiontelecom.service.js';
 
 export async function decisionTelecomHandler(request: FastifyRequest, reply: FastifyReply) {
   try {
-    const input = decisionTelecomReceiptSchema.parse(request.body);
+    const input = decisiontelecomReceiptSchema.parse(request.body);
 
     await decisionTelecomService(request, input);
 

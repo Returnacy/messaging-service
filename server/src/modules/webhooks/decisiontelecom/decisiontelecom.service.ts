@@ -1,8 +1,8 @@
 import type { FastifyRequest } from "fastify";
-import type { DecisionTelecomReceiptInput } from "./decisiontelecom.schema.js";
+import type { DecisionTelecomReceipt } from "@messaging-service/types";
 import { getQueue } from "@messaging-service/utils";
 
-export async function decisionTelecomService(request: FastifyRequest, input: DecisionTelecomReceiptInput) {
+export async function decisionTelecomService(request: FastifyRequest, input: DecisionTelecomReceipt) {
   const queue = getQueue('messages.updates', request.server.redisConnection);
 
   const translateToStatus = (status: number) => {
