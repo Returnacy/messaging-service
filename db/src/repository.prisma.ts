@@ -1,9 +1,5 @@
 import { prisma } from './prismaClient.js';
-import type {
-  OutboundMessage,
-  MessageStatus,
-  Message
-} from "@messaging-service/types";
+import type { OutboundMessage, MessageStatus, Message } from "@messaging-service/types";
 import { Prisma } from "@prisma/client";
 import type { ProviderRequestLog } from "@prisma/client";
 
@@ -11,27 +7,8 @@ type DBOutbound = Prisma.OutboundMessageGetPayload<{
   include: { payload: true, provider: true };
 }>;
 
-const ID_KEY_TTL_SECONDS = 30; // 30 seconds
-
 export class RepositoryPrisma {
-
-  async createIdempotencyKey(key: string): Promise<any> {
-    const expirationDate = new Date(Date.now() + 1000 * ID_KEY_TTL_SECONDS);
-    const check = await prisma.idempotencyKey.findUnique({
-      where: { key }
-    });
-    if (check)
-      throw new Error('Idempotency key already exists');
-
-    const idempotencyKey = await prisma.idempotencyKey.create({
-      data: { 
-        key: key,
-        expiresAt: expirationDate
-      }
-    });
-
-    return idempotencyKey;
-  }
+ 
 
   async createOutboundMessage(data: Message): Promise<OutboundMessage | null> {
     const providerId = await prisma.provider.findFirst({
