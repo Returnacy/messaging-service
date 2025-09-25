@@ -1,4 +1,4 @@
 import { z } from 'zod';
-import { messagesSchema } from './messageSchema.js';
+import { messageSchema } from './messageSchema.js';
 
-export const batchSchema = z.array(messagesSchema);
+export const batchSchema = z.array(messageSchema);
