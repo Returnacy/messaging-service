@@ -1,4 +1,4 @@
-import { PayloadRecipient } from "./paylodRecipient.d.ts"
+import { PayloadRecipient } from "./payloadRecipient.js"
 
 export type MessagePayload = {
   subject?: string | null;
