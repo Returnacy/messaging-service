@@ -182,8 +182,8 @@ export class RepositoryPrisma {
     // We only want to mutate state if the message is still in a mutable, in-flight state.
     // Terminal states (DELIVERED, BOUNCED, FAILED) should NOT be regressed back to QUEUED.
     // We perform a conditional update using updateMany and inspect the affected row count.
-    const mutableStatuses = ['SENDING', 'QUEUED', 'SENT'];
-    const targetStatus = finalFailure ? 'FAILED' : 'QUEUED';
+    const mutableStatuses: MessageStatus[] = ['SENDING', 'QUEUED', 'SENT'];
+    const targetStatus: MessageStatus = finalFailure ? 'FAILED' : 'QUEUED';
     const res = await prisma.outboundMessage.updateMany({
       where: { id, status: { in: mutableStatuses } },
       data: {
