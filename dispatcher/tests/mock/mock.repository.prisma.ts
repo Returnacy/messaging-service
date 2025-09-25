@@ -40,4 +40,13 @@ export class MockRepo extends RepositoryPrisma {
     }
     return message;
   }
+
+  // New methods referenced in delivery receipt path
+  async getOutboundMessageByExternalId(externalId: string) {
+    return Object.values(this.messages).find(m => (m as any).externalId === externalId) || null;
+  }
+  async createDeliveryReceipt(data: any) { this.logs.push({ type: 'receipt', ...data }); return data; }
+  async updateOutboundMessageStatusToDelivered(id: string) { this.messages[id]!.status = 'DELIVERED' as any; }
+  async updateOutboundMessageStatusToBounced(id: string) { this.messages[id]!.status = 'BOUNCED' as any; }
+  async updateOutboundMessageStatusToFailed(id: string) { this.messages[id]!.status = 'FAILED' as any; }
 }
