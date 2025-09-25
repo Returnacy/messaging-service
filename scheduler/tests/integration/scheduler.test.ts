@@ -50,7 +50,7 @@ describe("scheduleDueMessages integration", () => {
 
     const msg = await prisma.outboundMessage.create({
       data: {
-        externalId: randomUUID(),
+        idempotencyKey: randomUUID(),
         recipientId: "user-123",
         channel: "EMAIL",
         provider: {

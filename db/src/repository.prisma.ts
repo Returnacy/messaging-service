@@ -1,9 +1,5 @@
 import { prisma } from './prismaClient.js';
-import type {
-  OutboundMessage,
-  MessageStatus,
-  Message
-} from "@messaging-service/types";
+import type { OutboundMessage, MessageStatus, Message } from "@messaging-service/types";
 import { Prisma } from "@prisma/client";
 import type { ProviderRequestLog } from "@prisma/client";
 
@@ -12,18 +8,7 @@ type DBOutbound = Prisma.OutboundMessageGetPayload<{
 }>;
 
 export class RepositoryPrisma {
-
-  async createIdempotencyKey(key: string): Promise<any> {
-    const expirationDate = new Date(Date.now() + 1000 * 30); // 30 seconds
-    const idempotencyKey = await prisma.idempotencyKey.create({
-      data: { 
-        key: key,
-        expiresAt: expirationDate
-      }
-    });
-
-    return idempotencyKey;
-  }
+ 
 
   async createOutboundMessage(data: Message): Promise<OutboundMessage | null> {
     const providerId = await prisma.provider.findFirst({
@@ -55,6 +40,15 @@ export class RepositoryPrisma {
       include: { payload: true, provider: true }
     });
 
+    if (!db) return null;
+    return this.mapDbToOutbound(db);
+  }
+
+  async getOutboundMessageByIdempotencyKey(key: string): Promise<OutboundMessage | null> {
+    const db = await prisma.outboundMessage.findFirst({
+      where: { idempotencyKey: key },
+      include: { payload: true, provider: true }
+    });
     if (!db) return null;
     return this.mapDbToOutbound(db);
   }
@@ -265,9 +259,8 @@ export class RepositoryPrisma {
     // Prisma has no direct update where returning count; use updateMany to perform conditional update and inspect count
     const res = await prisma.outboundMessage.updateMany({
       where: { id, status: expectedStatus },
-      data: { status: 'SENDING' }
+      data: { status: 'SENDING', updatedAt: new Date() }
     });
-    // res.count === 1 means we successfully transitioned status -> SENDING
     return res.count === 1;
   }
 }

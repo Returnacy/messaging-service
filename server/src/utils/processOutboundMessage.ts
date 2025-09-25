@@ -1,24 +1,33 @@
 import type { FastifyRequest } from 'fastify';
-import type { MessagesInput } from '../modules/internal/v1/messages/messages.schema.js';
 import type { Message, MessageStatus, OutboundMessage } from '@messaging-service/types';
 import { getQueue } from "@messaging-service/utils";
+import { computeMessageMinuteHash } from '@messaging-service/utils';
 
 export async function processOutboundMessage(
   request: FastifyRequest,
-  idempotencyKey: string,
-  input: MessagesInput
+  input: Message
 ): Promise<OutboundMessage> {
-  const external = await request.server.repository.createIdempotencyKey(idempotencyKey);
+  const refDate = input.scheduledAt ?? new Date();
+  const idempotencyKey: string = computeMessageMinuteHash({
+    recipientId: input.recipientId,
+    channel: input.channel,
+    payload: {
+      subject: input.payload.subject,
+      bodyHtml: input.payload.bodyHtml,
+      bodyText: input.payload.bodyText,
+      from: input.payload.from,
+      to: input.payload.to,
+    },
+    campaignId: input.campaignId ?? null,
+  }, refDate);
 
-  if (!external)
-    throw new Error('Failed to create idempotency key');
+  // Fast path: if a message with this key already exists, return it
+  const existing = await request.server.repository.getOutboundMessageByIdempotencyKey(idempotencyKey);
+  if (existing) return existing;
 
-  const msg: Message = {
-    ...input,
-    externalId: external.key,
-  };
+  const msgWithKey = { ...input, idempotencyKey } as any;
 
-  const outboundMsg: OutboundMessage = await request.server.repository.createOutboundMessage(msg);
+  const outboundMsg: OutboundMessage = await request.server.repository.createOutboundMessage(msgWithKey);
 
   if (outboundMsg.status === 'QUEUED' as MessageStatus) {
     const queue = getQueue('messages.dispatch', request.server.redisConnection);

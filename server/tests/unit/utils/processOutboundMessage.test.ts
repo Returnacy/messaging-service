@@ -3,11 +3,10 @@ import { describe, it, expect, vi } from 'vitest';
 import type { FastifyRequest } from 'fastify';
 import { processOutboundMessage } from '@/utils/processOutboundMessage.js';
 
-vi.mock('@messaging-service/utils', () => {
-  return {
-    getQueue: vi.fn(() => ({ add: vi.fn() })),
-  };
-});
+vi.mock('@messaging-service/utils', () => ({
+  getQueue: vi.fn(() => ({ add: vi.fn() })),
+  computeMessageMinuteHash: vi.fn(() => 'hash-fixed-for-test'),
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -18,7 +17,7 @@ describe('processOutboundMessage', () => {
     return {
       server: {
         repository: {
-          createIdempotencyKey: vi.fn().mockResolvedValue({ key: 'idem-1' }),
+          getOutboundMessageByIdempotencyKey: vi.fn().mockResolvedValue(null),
           createOutboundMessage: vi.fn().mockResolvedValue({ id: 'm1', status: 'QUEUED' }),
           ...repoImpl,
         },
@@ -33,7 +32,7 @@ describe('processOutboundMessage', () => {
     const queue = { add: vi.fn() };
     vi.mocked(getQueue).mockReturnValue(queue as any);
 
-    const result = await processOutboundMessage(request, 'idem-1', {
+    const result = await processOutboundMessage(request, {
       recipientId: 'c2c5d2f4-8d6a-4c1a-9b2b-1a2b3c4d5e6f',
       campaignId: null,
       channel: 'EMAIL',
@@ -49,7 +48,7 @@ describe('processOutboundMessage', () => {
     } as any);
 
     expect(result.id).toBe('m1');
-    expect(queue.add).toHaveBeenCalledWith('dispatch', expect.objectContaining({ id: 'm1' }));
+  expect(queue.add).toHaveBeenCalledWith('dispatch', expect.objectContaining({ id: 'm1' }));
   });
 
   it('does not add job when message not QUEUED', async () => {
@@ -60,16 +59,25 @@ describe('processOutboundMessage', () => {
     const queue = { add: vi.fn() };
     vi.mocked(getQueue).mockReturnValue(queue as any);
 
-    await processOutboundMessage(request, 'idem-2', {} as any);
+    // Provide minimal valid message shape so hashing logic has required fields
+    await processOutboundMessage(request, {
+      recipientId: 'recipient-x',
+      campaignId: null,
+      channel: 'EMAIL',
+      payload: {
+        subject: 'S',
+        bodyHtml: null,
+        bodyText: 'tx',
+        from: 'noreply@example.com',
+        to: { email: 'x@example.com' },
+      },
+      scheduledAt: null,
+      maxAttempts: 1,
+    } as any);
 
     expect(queue.add).not.toHaveBeenCalled();
     expect(getQueue).not.toHaveBeenCalled();
   });
 
-  it('throws when idempotency key cannot be created', async () => {
-    const request = makeReq({
-      createIdempotencyKey: vi.fn().mockResolvedValue(null),
-    });
-    await expect(processOutboundMessage(request, 'idem-x', {} as any)).rejects.toThrow('Failed to create idempotency key');
-  });
+  // idempotency-key is now server-side; no longer throws for missing header or table
 });

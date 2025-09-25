@@ -54,7 +54,8 @@ async function claimDueMessages(now: Date, batchSize: number): Promise<OutboundM
   // Map DB records to OutboundMessage type
   const messages: OutboundMessage[] = dbMessages.map((db: any) => ({
     id: db.id,
-    externalId: db.externalId,
+    idempotencyKey: db.idempotencyKey,
+    externalId: db.externalId ?? undefined,
     campaignId: db.campaignId ?? undefined,
     recipientId: db.recipientId,
     channel: db.channel,

@@ -62,7 +62,8 @@ model MessagePayload {
 
 model OutboundMessage {
   id                         String              @id @default(cuid())
-  externalId                 String              @unique
+  externalId                 String?             @unique
+  idempotencyKey             String              @unique
   campaignId                 String?   // opaque reference to campaign-service (do not copy campaign data)
   recipientId                String    // opaque reference to user-service
   channel                    Channel
@@ -84,6 +85,9 @@ model OutboundMessage {
   provider                   Provider            @relation(fields: [providerId], references: [id])
   DeliveryReceipts           DeliveryReceipt[]
   ProviderLogs               ProviderRequestLog[]
+
+  @@index([status, scheduledAt])
+  @@index([providerId])
 }
 
 model DeliveryReceipt {
@@ -111,13 +115,6 @@ model ProviderRequestLog {
   
   outboundMessage            OutboundMessage?    @relation(fields: [outboundMessageId], references: [id])
   provider                   Provider           @relation(fields: [providerId], references: [id])
-}
-
-model IdempotencyKey {
-  key                        String              @id
-  createdAt                  DateTime            @default(now())
-  responseRef                String?  // ref to stored response/result if you cache
-  expiresAt                  DateTime
 }
 
 model AuditLog {

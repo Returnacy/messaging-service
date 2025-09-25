@@ -1,4 +1,3 @@
-// authGuard.ts
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 function hasRole(request: FastifyRequest, role: string, clientId?: string): boolean {

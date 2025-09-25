@@ -6,7 +6,8 @@ import { batchService } from '@/modules/internal/v1/messages/batch/batch.service
 import { processOutboundMessage } from '@/utils/processOutboundMessage.js';
 
 vi.mock('@/utils/processOutboundMessage.js', () => ({
-  processOutboundMessage: vi.fn(async (_req, _key, _input) => ({ id: 'm1', status: 'QUEUED' })),
+  // New signature: (request, input)
+  processOutboundMessage: vi.fn(async (_req, _input) => ({ id: 'm1', status: 'QUEUED' })),
 }));
 
 describe('messages services', () => {
@@ -24,19 +25,14 @@ describe('messages services', () => {
     } as unknown as FastifyRequest;
   };
 
-  it('messagesService requires idempotency-key header', async () => {
+  it('messagesService processes message without idempotency header', async () => {
     const req = makeReq({});
-    await expect(messagesService(req, {} as any)).rejects.toThrow('Idempotency key is required');
-  });
-
-  it('messagesService processes message with idempotency-key', async () => {
-    const req = makeReq({ 'idempotency-key': 'k1' });
     const res = await messagesService(req, {} as any);
     expect(res).toEqual({ messageId: 'm1' });
   });
 
-  it('messagesService creates idempotency key and message', async () => {
-    const req = makeReq({ 'idempotency-key': 'k2' });
+  it('messagesService handles a valid message payload', async () => {
+    const req = makeReq({});
     const res = await messagesService(req, {
       campaignId: null,
       recipientId: 'c2c5d2f4-8d6a-4c1a-9b2b-1a2b3c4d5e6f',
@@ -54,19 +50,8 @@ describe('messages services', () => {
     expect(res).toEqual({ messageId: 'm1' });
   });
 
-  it('messagesService fails when idempotencyKey not created', async () => {
-    vi.mocked(processOutboundMessage).mockRejectedValueOnce(new Error('Failed to create idempotency key'));
-    const req = makeReq({ 'idempotency-key': 'k3' }, { createIdempotencyKey: vi.fn().mockResolvedValue(null) });
-    await expect(messagesService(req, {} as any)).rejects.toThrow('Failed to create idempotency key');
-  });
-
-  it('batchService requires array of idempotency keys', async () => {
-    const req = makeReq({ 'idempotency-key': 'not-array' });
-    await expect(batchService(req, [] as any)).rejects.toThrow('Idempotency key is required');
-  });
-
   it('batchService processes multiple messages', async () => {
-    const req = makeReq({ 'idempotency-key': ['k1', 'k2'] });
+    const req = makeReq({});
     const res = await batchService(req, [{}, {}] as any);
     expect(res.messageId).toHaveLength(2);
   });
