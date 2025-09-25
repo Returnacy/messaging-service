@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { prisma } from '@messaging-service/db';
-import type { OutboundMessage } from '@messaging-service/types';
+import type { OutboundMessage, MessagePayload, PayloadRecipient } from '@messaging-service/types';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import pino from 'pino';
@@ -44,7 +44,7 @@ async function claimDueMessages(now: Date, batchSize: number): Promise<OutboundM
   `;
   if (!rows.length) return [];
 
-  const ids = rows.map(r => r.id);
+  const ids = rows.map((r: any) => r.id);
   const dbMessages = await prisma.outboundMessage.findMany({
     where: { id: { in: ids } },
     include: { payload: true, provider: true },
@@ -65,11 +65,11 @@ async function claimDueMessages(now: Date, batchSize: number): Promise<OutboundM
       subject: db.payload.subject ?? null,
       bodyText: db.payload.bodyText ?? null,
       bodyHtml: db.payload.bodyHtml ?? null,
-      to: db.payload.to as any,
+      to: db.payload.to as PayloadRecipient,
       from: db.payload.from,
       metadata: db.payload.metadata ?? undefined,
       createdAt: db.payload.createdAt,
-    } as any,
+    } as MessagePayload,
     provider: {
       id: db.provider.id,
       name: db.provider.name,
@@ -91,7 +91,7 @@ export async function scheduleDueMessages() {
   const messages = await claimDueMessages(now, BATCH_SIZE);
   if (messages.length === 0) return;
 
-  // Enqueue minimal payload: only id. Dispatcher fetches full message.
+  // Enqueue messages. Dispatcher fetches full message.
   await dispatchQueue.addBulk(
     messages.map(m => ({ name: 'dispatch', data: m }))
   );

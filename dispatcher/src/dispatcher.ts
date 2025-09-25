@@ -20,7 +20,7 @@ const connection = new Redis(process.env.REDIS_URL!, {
 
 async function start() {
   const repo = new RepositoryPrisma();
-  const processor = new Processor(repo);
+  const processor = new Processor(repo, connection, { logger });
 
   const dispatchQueue = createQueue('messages.dispatch', connection);
   const retriesQueue = createQueue('messages.retries', connection);

@@ -1,5 +1,5 @@
 import { prisma } from './prismaClient.js';
-import type { OutboundMessage, MessageStatus, Message } from "@messaging-service/types";
+import type { OutboundMessage, MessageStatus, Message, Channel, PayloadRecipient } from "@messaging-service/types";
 import { Prisma } from "@prisma/client";
 import type { ProviderRequestLog } from "@prisma/client";
 
@@ -58,17 +58,18 @@ export class RepositoryPrisma {
   mapDbToOutbound(db: DBOutbound): OutboundMessage {
     return {
       id: db.id,
-      externalId: db.externalId,
+      externalId: db.externalId ?? null,
+      idempotencyKey: db.idempotencyKey,
       campaignId: db.campaignId ?? undefined,
       recipientId: db.recipientId,
-      channel: db.channel as any,
+      channel: db.channel as Channel,
       providerId: db.providerId,
       payload: {
         id: db.payload.id,
         subject: db.payload.subject ?? null,
-        bodyText: db.payload.bodyText ?? null,
+        bodyText: db.payload.bodyText,
         bodyHtml: db.payload.bodyHtml ?? null,
-        to: db.payload.to as any,
+        to: db.payload.to as PayloadRecipient,
         from: db.payload.from,
         metadata: db.payload.metadata ?? undefined
       },
@@ -178,22 +179,21 @@ export class RepositoryPrisma {
    * Uses conditional update if necessary for optimistic control.
    */
   async updateOutboundMessageStatusOnFailure(id: string, attempt: number, errorMessage: string, finalFailure = false) {
-    const data: Prisma.OutboundMessageUpdateInput = {
-      attempt,
-      lastError: errorMessage,
-      lastAttemptAt: new Date()
-    };
-    if (finalFailure) {
-      (data as any).status = 'FAILED';
-    } else {
-      // Optionally set status to SENDING or keep as QUEUED depending on your retry policy
-      (data as any).status = 'QUEUED';
-    }
-
-    await prisma.outboundMessage.update({
-      where: { id },
-      data
+    // We only want to mutate state if the message is still in a mutable, in-flight state.
+    // Terminal states (DELIVERED, BOUNCED, FAILED) should NOT be regressed back to QUEUED.
+    // We perform a conditional update using updateMany and inspect the affected row count.
+    const mutableStatuses: MessageStatus[] = ['SENDING', 'QUEUED', 'SENT'];
+    const targetStatus: MessageStatus = finalFailure ? 'FAILED' : 'QUEUED';
+    const res = await prisma.outboundMessage.updateMany({
+      where: { id, status: { in: mutableStatuses } },
+      data: {
+        attempt,
+        lastError: errorMessage,
+        lastAttemptAt: new Date(),
+        status: targetStatus
+      }
     });
+    return res.count === 1; // indicate whether we actually updated (caller may choose to act differently)
   }
 
   /**

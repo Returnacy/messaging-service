@@ -29,8 +29,12 @@ export class MockRepo extends RepositoryPrisma {
 
   async updateOutboundMessageStatusOnFailure(id: string, attempt: number, errorMessage: string, finalFailure = false) {
     const message = this.messages[id]!;
+    if (!message) return false;
+    const terminal = ['DELIVERED','BOUNCED','FAILED'];
+    if (terminal.includes(message.status as any)) return false; // do not regress terminal states
     message.attempt = attempt;
     message.status = finalFailure ? 'FAILED' : 'QUEUED';
+    return true;
   }
 
   async updateOutboundMessageExternalId(id: string, externalId?: string | null) {
@@ -40,4 +44,13 @@ export class MockRepo extends RepositoryPrisma {
     }
     return message;
   }
+
+  // New methods referenced in delivery receipt path
+  async getOutboundMessageByExternalId(externalId: string) {
+    return Object.values(this.messages).find(m => (m as any).externalId === externalId) || null;
+  }
+  async createDeliveryReceipt(data: any) { this.logs.push({ type: 'receipt', ...data }); return data; }
+  async updateOutboundMessageStatusToDelivered(id: string) { this.messages[id]!.status = 'DELIVERED' as any; }
+  async updateOutboundMessageStatusToBounced(id: string) { this.messages[id]!.status = 'BOUNCED' as any; }
+  async updateOutboundMessageStatusToFailed(id: string) { this.messages[id]!.status = 'FAILED' as any; }
 }

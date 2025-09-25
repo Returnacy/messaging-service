@@ -1,6 +1,7 @@
 import { describe, it, beforeEach, expect, vi } from "vitest";
 import type { OutboundMessage } from "@messaging-service/types";
 import { Processor } from "@/processor.js";
+import { Redis } from 'ioredis';
 import { MockRepo } from "@tests/mock/mock.repository.prisma.js";
 
 // --- Define mocks inside vi.mock factories ---
@@ -26,7 +27,11 @@ describe("Processor", () => {
 
   beforeEach(() => {
     repo = new MockRepo();
-    proc = new Processor(repo);
+    // Use a mock Redis client; for unit tests we can stub only eval
+    const redis = {
+      eval: vi.fn().mockResolvedValue(1),
+    } as unknown as Redis;
+    proc = new Processor(repo as any, redis as any);
 
     // Reset mocks before each test
     vi.mocked(sendWithResendAdapter).mockReset();
