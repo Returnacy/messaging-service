@@ -36,7 +36,7 @@ describe('RepositoryPrisma Integration', () => {
 
       // eslint-disable-next-line no-console
       console.log('Running `npx prisma db push` to ensure schema exists ...');
-      execSync('npx prisma db push', { stdio: 'inherit' });
+  execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
     }
   });
 
@@ -76,6 +76,7 @@ describe('RepositoryPrisma Integration', () => {
 
     const msg = await prisma.outboundMessage.create({
       data: {
+        idempotencyKey: 'itest-key-1',
         payload: {
           connect: { id: payload.id },
         },
@@ -159,7 +160,7 @@ beforeAll(async () => {
 
     // eslint-disable-next-line no-console
     console.log('Running `npx prisma db push` to ensure schema exists ...');
-    execSync('npx prisma db push', { stdio: 'inherit' });
+  execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
   }
 });
 
@@ -211,6 +212,7 @@ test('create log + update success (integration)', async () => {
 
   const msg = await prisma.outboundMessage.create({
     data: {
+      idempotencyKey: 'itest-key-2',
       payload: {
         connect: { id: payload.id },
       },
