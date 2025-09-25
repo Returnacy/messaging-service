@@ -46,7 +46,7 @@ export class Processor {
           throw new Error(`Unsupported channel: ${msg.channel}`);
       }
 
-      const providerId = res?.providerId ?? (msg as any).providerId ?? 'unknown';
+      const providerId = res?.providerId ?? msg.providerId ?? 'unknown';
       const providerMessageId = res?.providerMessageId ?? null;
 
       await this.repo.createProviderRequestLog({ outboundMessageId: res.outboundMessageId ?? msg.id, providerId, request: res.requestPayload ?? {}, response: res.responsePayload ?? {}, httpStatus: res.httpStatus ?? null });
@@ -66,7 +66,10 @@ export class Processor {
       const errMessage = err?.message ?? String(err ?? 'unknown error');
 
       try {
-        await this.repo.updateOutboundMessageStatusOnFailure(msg.id, attempt, errMessage, finalFailure);
+        const updated = await this.repo.updateOutboundMessageStatusOnFailure(msg.id, attempt, errMessage, finalFailure);
+        if (!updated) {
+          this.logger?.info?.('Failure update skipped due to terminal state', { id: msg.id, err: errMessage });
+        }
       } catch (dbErr) {
         this.logger?.error?.('Failed to update message failure status for', msg.id, dbErr);
       }

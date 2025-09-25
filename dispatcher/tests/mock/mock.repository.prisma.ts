@@ -29,8 +29,12 @@ export class MockRepo extends RepositoryPrisma {
 
   async updateOutboundMessageStatusOnFailure(id: string, attempt: number, errorMessage: string, finalFailure = false) {
     const message = this.messages[id]!;
+    if (!message) return false;
+    const terminal = ['DELIVERED','BOUNCED','FAILED'];
+    if (terminal.includes(message.status as any)) return false; // do not regress terminal states
     message.attempt = attempt;
     message.status = finalFailure ? 'FAILED' : 'QUEUED';
+    return true;
   }
 
   async updateOutboundMessageExternalId(id: string, externalId?: string | null) {
