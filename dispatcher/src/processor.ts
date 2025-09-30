@@ -4,6 +4,7 @@ import { sendWithDecisionTelecomAdapter } from './adapters/decisionTelecom.js';
 import type { OutboundMessage } from '@messaging-service/types';
 import { ProviderRateLimiter } from './providerRateLimiter.js';
 import type { ProviderResponse } from './adapters/types/providerResponse.js';
+import { createEvent, EventTypes } from '@returnacy/event-contracts';
 
 export class Processor {
   private repo: RepositoryPrisma;
@@ -57,6 +58,36 @@ export class Processor {
       }
 
       this.logger?.info?.('Message sent', msg.id, 'provider', providerId);
+
+      // Emit message.sent event (outbox pattern)
+      try {
+        const evt = createEvent({
+          type: EventTypes.MESSAGE_SENT,
+          version: 1,
+          producer: 'messaging-service.dispatcher',
+          payload: {
+            messageId: msg.id,
+            provider: providerId,
+            channel: msg.channel,
+            status: 'SENT',
+            externalReference: providerMessageId || undefined,
+            sentAt: new Date().toISOString(),
+            businessId: (msg as any)?.payload?.metadata?.businessId || undefined,
+            campaignId: msg.campaignId || undefined
+          },
+          traceId: (globalThis as any).process?.env?.TRACE_ID || undefined
+        });
+        await (this.repo as any).createOutboxEvent({
+          aggregateType: 'OutboundMessage',
+          aggregateId: msg.id,
+          type: evt.type,
+          version: evt.version,
+          payload: evt,
+          traceId: evt.traceId
+        });
+      } catch (evtErr) {
+        this.logger?.error?.('Failed to enqueue message.sent event', { id: msg.id, error: (evtErr as Error).message });
+      }
 
       return { success: true, providerId };
     } catch (err: any) {

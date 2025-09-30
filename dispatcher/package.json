@@ -10,6 +10,8 @@
     "build": "tsc -b .",
     "start": "node dist/src/dispatcher.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
+    ,"start:outbox": "node dist/src/outboxPublisher.js"
+    ,"dev:outbox": "ts-node-dev --respawn --transpile-only src/outboxPublisher.ts"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
@@ -28,5 +30,6 @@
     "pino": "^9.9.0",
     "resend": "^6.0.1",
     "tsconfig-paths": "^4.2.0"
+  ,"@returnacy/event-contracts": "^0.1.1"
   }
 }

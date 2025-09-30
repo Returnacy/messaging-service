@@ -7,5 +7,11 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.ts'],
   },
+  optimizeDeps: {
+    include: ['@returnacy/event-contracts']
+  },
+  resolve: {
+    preserveSymlinks: true
+  },
   plugins: [tsconfigPaths()],
 });

@@ -7,10 +7,12 @@
     "paths": {
       "@/*": ["src/*"],
       "@tests/*": ["tests/*"],
+      "@returnacy/event-contracts": ["../../event-contracts/dist/index.d.ts"]
     },
     "types": ["node"], // remove this line if @types/node installed and you prefer auto detection
     "tsBuildInfoFile": "dist/.tsbuildinfo",
     "isolatedModules": true
+    ,"moduleResolution": "NodeNext"
   },
   "references": [
     { "path": "../types" },
