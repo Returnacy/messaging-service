@@ -94,9 +94,21 @@ jobs:
           echo "@returnacy:registry=https://npm.pkg.github.com" > .npmrc
           TOKEN_SOURCE="GITHUB_TOKEN"
           TOKEN="$FALLBACK_GITHUB_TOKEN"
-          echo "(Optional) For private cross-repo packages set secret PACKAGE_READ_TOKEN with a PAT having read:packages" >&2
+          echo "(Optional) Set PACKAGE_READ_TOKEN secret (PAT: read:packages, repo) if 403 persists." >&2
           echo "//npm.pkg.github.com/:_authToken=${TOKEN}" >> .npmrc
           echo "Configured .npmrc using $TOKEN_SOURCE (token redacted):" && sed 's/_authToken=.*/_authToken=***REDACTED***/' .npmrc
+
+      - name: "Preflight: verify event-contracts visibility"
+        run: |
+          set -e
+          echo "Attempting to view @returnacy/event-contracts metadata (will fail fast if token insufficient)"
+          if ! pnpm view @returnacy/event-contracts version 2>/tmp/pnpm_view_err.log; then
+            echo "--- pnpm view error log ---" >&2
+            cat /tmp/pnpm_view_err.log >&2 || true
+            echo "::error::Unable to read @returnacy/event-contracts. If this is a private package in another repo, add secret PACKAGE_READ_TOKEN (PAT: read:packages, repo)." >&2
+            exit 1
+          fi
+          echo "event-contracts version: $(pnpm view @returnacy/event-contracts version)"
 
       - name: Tool versions
         run: |
