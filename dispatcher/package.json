@@ -24,7 +24,7 @@
   "dependencies": {
     "@messaging-service/db": "workspace:*",
     "@messaging-service/types": "workspace:*",
-    "@returnacy/event-contracts": "^0.1.4",
+    "@returnacy/event-contracts": "^0.1.5",
     "bullmq": "^5.58.0",
     "dotenv": "^17.2.1",
     "ioredis": "^5.7.0",

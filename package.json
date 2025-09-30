@@ -24,6 +24,6 @@
     "server"
   ],
   "dependencies": {
-    "@returnacy/event-contracts": "^0.1.4"
+    "@returnacy/event-contracts": "^0.1.5"
   }
 }

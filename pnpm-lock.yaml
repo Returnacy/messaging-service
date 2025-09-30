@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@returnacy/event-contracts':
-        specifier: ^0.1.4
-        version: 0.1.4
+        specifier: ^0.1.5
+        version: 0.1.5
 
   db:
     dependencies:
@@ -52,8 +52,8 @@ importers:
         specifier: workspace:*
         version: link:../types
       '@returnacy/event-contracts':
-        specifier: ^0.1.4
-        version: 0.1.4
+        specifier: ^0.1.5
+        version: 0.1.5
       bullmq:
         specifier: ^5.58.0
         version: 5.59.0
@@ -504,8 +504,8 @@ packages:
   '@prisma/get-platform@6.14.0':
     resolution: {integrity: sha512-7VjuxKNwjnBhKfqPpMeWiHEa2sVjYzmHdl1slW6STuUCe9QnOY0OY1ljGSvz6wpG4U8DfbDqkG1yofd/1GINww==}
 
-  '@returnacy/event-contracts@0.1.4':
-    resolution: {integrity: sha512-PX5YH1ulYpu+jugXLoTqYzTHu4pX1P3WaVJTeFaOBBc5ry8jYFPKF2dZqJUz8kvhfr+Iw7fFuQhyS/R9FNbXEw==, tarball: https://npm.pkg.github.com/download/@returnacy/event-contracts/0.1.4/2d76479d222d779ca3be4a0291e3430ec17a8dec}
+  '@returnacy/event-contracts@0.1.5':
+    resolution: {integrity: sha512-MkLrxMS3ouxZRbdZK6sR3JYqxdt7vnkXY4eXLmxXPjExlgumeZ6XWokydNqnxj+tn4lK2p5aeMtfbq6Mzvz9dQ==, tarball: https://npm.pkg.github.com/download/@returnacy/event-contracts/0.1.5/863bc30ef23651c303d19f1ed263f313b9744c0f}
     engines: {node: '>=18'}
 
   '@rollup/rollup-android-arm-eabi@4.52.3':
@@ -1879,7 +1879,7 @@ snapshots:
     dependencies:
       '@prisma/debug': 6.14.0
 
-  '@returnacy/event-contracts@0.1.4':
+  '@returnacy/event-contracts@0.1.5':
     dependencies:
       uuid: 9.0.1
       zod: 3.25.76
