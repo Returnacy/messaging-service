@@ -7,11 +7,14 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.ts'],
   },
+  // Excluding the contracts package from Vite's dependency optimization avoids
+  // Vite trying to prebundle an older tarball version that lacked built dist files.
+  // Node's native ESM/CJS resolution works fine for the current installed version.
   optimizeDeps: {
-    include: ['@returnacy/event-contracts']
+    exclude: ['@returnacy/event-contracts'],
   },
   resolve: {
-    preserveSymlinks: true
+    preserveSymlinks: true,
   },
   plugins: [tsconfigPaths()],
 });

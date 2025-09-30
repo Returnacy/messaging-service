@@ -5,13 +5,13 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-  "test": "vitest run",
+    "test": "vitest run",
     "test:watch": "vitest",
     "build": "tsc -b .",
     "start": "node dist/src/dispatcher.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts"
-    ,"start:outbox": "node dist/src/outboxPublisher.js"
-    ,"dev:outbox": "ts-node-dev --respawn --transpile-only src/outboxPublisher.ts"
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "start:outbox": "node dist/src/outboxPublisher.js",
+    "dev:outbox": "ts-node-dev --respawn --transpile-only src/outboxPublisher.ts"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
@@ -24,12 +24,12 @@
   "dependencies": {
     "@messaging-service/db": "workspace:*",
     "@messaging-service/types": "workspace:*",
+    "@returnacy/event-contracts": "^0.1.4",
     "bullmq": "^5.58.0",
     "dotenv": "^17.2.1",
     "ioredis": "^5.7.0",
     "pino": "^9.9.0",
     "resend": "^6.0.1",
     "tsconfig-paths": "^4.2.0"
-  ,"@returnacy/event-contracts": "^0.1.1"
   }
 }

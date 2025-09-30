@@ -82,6 +82,12 @@ jobs:
       - name: Configure pnpm store path
         run: pnpm config set store-dir ~/.pnpm-store
 
+      - name: Configure GitHub Packages registry for @returnacy
+        run: |
+          echo "@returnacy:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+          echo "Configured .npmrc:" && cat .npmrc
+
       - name: Tool versions
         run: |
           echo "node: $(node -v)"
@@ -242,6 +248,8 @@ jobs:
           load: ${{ env.PUSH != 'true' }}
           provenance: false
           sbom: false
+          build-args: |
+            GITHUB_PACKAGES_TOKEN=${{ secrets.GITHUB_TOKEN }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}

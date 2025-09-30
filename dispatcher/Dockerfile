@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Copy manifests early for caching (include lockfile once committed)
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
+COPY .npmrc .npmrc
 COPY types/package.json types/package.json
 COPY utils/package.json utils/package.json
 COPY db/package.json db/package.json
@@ -16,7 +17,10 @@ COPY utils ./utils
 COPY db ./db
 COPY dispatcher ./dispatcher
 
-ENV CI=true
+ARG GITHUB_PACKAGES_TOKEN
+ENV CI=true \
+    GITHUB_PACKAGES_TOKEN=${GITHUB_PACKAGES_TOKEN}
+# Perform install with GitHub Packages auth (token is provided via build-arg in CI). The root .npmrc references the env var so the token itself is not baked into the file.
 RUN corepack enable && \
 	(pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile)
 
