@@ -6,7 +6,11 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    dependencies:
+      '@returnacy/event-contracts':
+        specifier: ^0.1.5
+        version: 0.1.5
 
   db:
     dependencies:
@@ -47,6 +51,9 @@ importers:
       '@messaging-service/types':
         specifier: workspace:*
         version: link:../types
+      '@returnacy/event-contracts':
+        specifier: ^0.1.5
+        version: 0.1.5
       bullmq:
         specifier: ^5.58.0
         version: 5.59.0
@@ -496,6 +503,10 @@ packages:
 
   '@prisma/get-platform@6.14.0':
     resolution: {integrity: sha512-7VjuxKNwjnBhKfqPpMeWiHEa2sVjYzmHdl1slW6STuUCe9QnOY0OY1ljGSvz6wpG4U8DfbDqkG1yofd/1GINww==}
+
+  '@returnacy/event-contracts@0.1.5':
+    resolution: {integrity: sha512-MkLrxMS3ouxZRbdZK6sR3JYqxdt7vnkXY4eXLmxXPjExlgumeZ6XWokydNqnxj+tn4lK2p5aeMtfbq6Mzvz9dQ==, tarball: https://npm.pkg.github.com/download/@returnacy/event-contracts/0.1.5/863bc30ef23651c303d19f1ed263f313b9744c0f}
+    engines: {node: '>=18'}
 
   '@rollup/rollup-android-arm-eabi@4.52.3':
     resolution: {integrity: sha512-h6cqHGZ6VdnwliFG1NXvMPTy/9PS3h8oLh7ImwR+kl+oYnQizgjxsONmmPSb2C66RksfkfIxEVtDSEcJiO0tqw==}
@@ -1550,6 +1561,10 @@ packages:
     resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
     hasBin: true
 
+  uuid@9.0.1:
+    resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    hasBin: true
+
   v8-compile-cache-lib@3.0.1:
     resolution: {integrity: sha512-wa7YjyUGfNZngI/vtK0UHAN+lgDCxBPCylVXGp0zu59Fz5aiGtNXaq3DhIov063MorB+VfufLh3JlF2KdTK3xg==}
 
@@ -1654,6 +1669,9 @@ packages:
   yocto-queue@1.2.1:
     resolution: {integrity: sha512-AyeEbWOu/TAXdxlV9wmGcR0+yh2j3vYPGOECcIj2S7MkrLyC7ne+oye2BKTItt0ii2PHk4cDy+95+LshzbXnGg==}
     engines: {node: '>=12.20'}
+
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
   zod@4.1.11:
     resolution: {integrity: sha512-WPsqwxITS2tzx1bzhIKsEs19ABD5vmCVa4xBo2tq/SrV4RNZtfws1EnCWQXM6yh8bD08a1idvkB5MZSBiZsjwg==}
@@ -1860,6 +1878,11 @@ snapshots:
   '@prisma/get-platform@6.14.0':
     dependencies:
       '@prisma/debug': 6.14.0
+
+  '@returnacy/event-contracts@0.1.5':
+    dependencies:
+      uuid: 9.0.1
+      zod: 3.25.76
 
   '@rollup/rollup-android-arm-eabi@4.52.3':
     optional: true
@@ -2909,6 +2932,8 @@ snapshots:
 
   uuid@11.1.0: {}
 
+  uuid@9.0.1: {}
+
   v8-compile-cache-lib@3.0.1: {}
 
   vite-node@1.6.1(@types/node@24.5.2):
@@ -3010,5 +3035,7 @@ snapshots:
   yn@3.1.1: {}
 
   yocto-queue@1.2.1: {}
+
+  zod@3.25.76: {}
 
   zod@4.1.11: {}

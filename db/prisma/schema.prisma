@@ -125,3 +125,24 @@ model AuditLog {
   payload                    Json?
   createdAt                  DateTime            @default(now())
 }
+
+model OutboxEvent {
+  id            String   @id @default(cuid())
+  aggregateType String
+  aggregateId   String
+  type          String
+  version       Int
+  payload       Json
+  traceId       String?
+  occurredAt    DateTime @default(now())
+  publishedAt   DateTime?
+  attempt       Int      @default(0)
+  error         String?
+  maxAttempts   Int      @default(10)
+  nextAttemptAt DateTime @default(now())
+
+  @@index([publishedAt])
+  @@index([type])
+  @@index([aggregateType, aggregateId])
+  @@index([nextAttemptAt])
+}
