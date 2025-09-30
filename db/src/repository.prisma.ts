@@ -263,4 +263,36 @@ export class RepositoryPrisma {
     });
     return res.count === 1;
   }
+
+  // Outbox methods
+  async createOutboxEvent(evt: { aggregateType: string; aggregateId: string; type: string; version: number; payload: any; traceId?: string; maxAttempts?: number }) {
+    return prisma.outboxEvent.create({
+      data: {
+        aggregateType: evt.aggregateType,
+        aggregateId: evt.aggregateId,
+        type: evt.type,
+        version: evt.version,
+        payload: evt.payload as any,
+        traceId: evt.traceId ?? null,
+        maxAttempts: evt.maxAttempts ?? 10,
+        nextAttemptAt: new Date()
+      }
+    });
+  }
+
+  async fetchUnpublishedOutboxEvents(limit: number = 100, now: Date = new Date()) {
+    return prisma.outboxEvent.findMany({ where: { publishedAt: null, nextAttemptAt: { lte: now } }, orderBy: { occurredAt: 'asc' }, take: limit });
+  }
+
+  async markOutboxEventPublished(id: string) {
+    return prisma.outboxEvent.update({ where: { id }, data: { publishedAt: new Date(), error: null } });
+  }
+
+  async markOutboxEventFailed(id: string, error: string, backoffSeconds: number) {
+    return prisma.outboxEvent.update({ where: { id }, data: { attempt: { increment: 1 }, error, nextAttemptAt: new Date(Date.now() + backoffSeconds * 1000) } });
+  }
+
+  async markOutboxEventGiveUp(id: string, error: string) {
+    return prisma.outboxEvent.update({ where: { id }, data: { error, nextAttemptAt: new Date(8640000000000000) } });
+  }
 }
