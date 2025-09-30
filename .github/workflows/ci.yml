@@ -1,16 +1,11 @@
+
 name: CI
 
 on:
   push:
     branches: [ main ]
-    paths-ignore:
-      - 'README.md'
-      - 'docs/**'
   pull_request:
     branches: [ '*' ]
-    paths-ignore:
-      - 'README.md'
-      - 'docs/**'
   workflow_dispatch:
 
 concurrency:
@@ -19,17 +14,9 @@ concurrency:
 
 jobs:
   test:
-    name: Test (Node ${{ matrix.node }})
-    # Need packages: read to allow GITHUB_TOKEN to download GitHub Packages (scoped npm pkg)
-    permissions:
-      contents: read
-      packages: read
+    name: Test & Lint
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        node: [20.x]
     services:
       postgres:
         image: postgres:16-alpine
@@ -56,26 +43,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node ${{ matrix.node }}
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 20.x
+          registry-url: https://npm.pkg.github.com/
+          scope: '@returnacy'
 
       - name: Install pnpm
-        env:
-          PNPM_VERSION: 10.17.1
         run: |
-          echo "Configuring pnpm ${PNPM_VERSION}"
-          corepack enable || true
-          if command -v corepack >/dev/null 2>&1; then
-            corepack prepare pnpm@${PNPM_VERSION} --activate || echo "corepack prepare failed, fallback to npm -g"
-          fi
-          if ! command -v pnpm >/dev/null 2>&1; then
-            npm install -g pnpm@${PNPM_VERSION}
-          fi
-          echo "pnpm version now: $(pnpm -v)"
+          corepack enable
+          corepack prepare pnpm@10.17.1 --activate
 
-      - name: Restore pnpm store cache
+      - name: Cache pnpm store
         uses: actions/cache@v4
         with:
           path: ~/.pnpm-store
@@ -86,61 +66,16 @@ jobs:
       - name: Configure pnpm store path
         run: pnpm config set store-dir ~/.pnpm-store
 
-      - name: Configure GitHub Packages registry for @returnacy
-        env:
-          FALLBACK_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Configure .npmrc for GitHub Packages
         run: |
-          set -euo pipefail
-          echo "@returnacy:registry=https://npm.pkg.github.com" > .npmrc
-          TOKEN_SOURCE="GITHUB_TOKEN"
-          TOKEN="$FALLBACK_GITHUB_TOKEN"
-          echo "(Optional) Set PACKAGE_READ_TOKEN secret (PAT: read:packages, repo) if 403 persists." >&2
-          echo "//npm.pkg.github.com/:_authToken=${TOKEN}" >> .npmrc
-          echo "Configured .npmrc using $TOKEN_SOURCE (token redacted):" && sed 's/_authToken=.*/_authToken=***REDACTED***/' .npmrc
+          echo "@returnacy:registry=https://npm.pkg.github.com/" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
 
-      - name: "Preflight: verify event-contracts visibility"
-        run: |
-          set -e
-          echo "Attempting to view @returnacy/event-contracts metadata (will fail fast if token insufficient)"
-          if ! pnpm view @returnacy/event-contracts version 2>/tmp/pnpm_view_err.log; then
-            echo "--- pnpm view error log ---" >&2
-            cat /tmp/pnpm_view_err.log >&2 || true
-            echo "::error::Unable to read @returnacy/event-contracts. If this is a private package in another repo, add secret PACKAGE_READ_TOKEN (PAT: read:packages, repo)." >&2
-            exit 1
-          fi
-          echo "event-contracts version: $(pnpm view @returnacy/event-contracts version)"
+      - name: Ensure @returnacy/event-contracts is available
+        run: pnpm view @returnacy/event-contracts version
 
-      - name: Tool versions
-        run: |
-          echo "node: $(node -v)"
-          echo "pnpm: $(pnpm -v)"
-          echo "git sha: $GITHUB_SHA"
-
-      - name: Install dependencies (respect lockfile)
-        env:
-          CI: true
-        run: |
-          set -eo pipefail
-          if [ -f pnpm-lock.yaml ]; then
-            echo "Lockfile present -> attempting frozen install"
-            if ! pnpm install --frozen-lockfile; then
-              echo "Frozen install failed (possibly incompatible lockfile). Retrying unfrozen..." >&2
-              pnpm install --no-frozen-lockfile
-            fi
-          else
-            echo "No pnpm-lock.yaml found -> non-frozen install (consider committing a lockfile)" >&2
-            pnpm install
-          fi
-          echo "Store path: $(pnpm store path)"
-
-      - name: Cache Prisma engines
-        id: prisma-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/prisma
-          key: prisma-engines-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            prisma-engines-${{ runner.os }}-
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma Client
         working-directory: db
@@ -153,70 +88,29 @@ jobs:
         working-directory: db
         run: pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
 
-      - name: Build packages (ordered)
+      - name: Build packages
         run: |
-          # db already built above for seed
           pnpm --filter @messaging-service/dispatcher build
           pnpm --filter @messaging-service/scheduler build
           pnpm --filter @messaging-service/server build
 
-      - name: Typecheck (noEmit)
+      - name: Typecheck
         run: pnpm -r exec tsc --noEmit --pretty false --skipLibCheck
 
-      - name: Run tests (vitest + coverage)
+      - name: Run tests
         run: pnpm test
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
           REDIS_URL: ${{ env.REDIS_URL }}
 
-      - name: Upload coverage
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ matrix.node }}
-          path: coverage
-          if-no-files-found: ignore
-
-      - name: Upload junit (if any)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: junit-${{ matrix.node }}
-          path: '**/junit.xml'
-          if-no-files-found: ignore
-
-      - name: Coverage summary
-        if: always()
-        run: |
-          if [ -f coverage/coverage-summary.json ]; then
-            lines=$(jq '.total.lines.pct' coverage/coverage-summary.json 2>/dev/null || echo 0)
-            statements=$(jq '.total.statements.pct' coverage/coverage-summary.json 2>/dev/null || echo 0)
-            branches=$(jq '.total.branches.pct' coverage/coverage-summary.json 2>/dev/null || echo 0)
-            functions=$(jq '.total.functions.pct' coverage/coverage-summary.json 2>/dev/null || echo 0)
-            echo "Coverage: lines=${lines}% statements=${statements}% branches=${branches}% functions=${functions}%" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "No coverage summary file found" >> $GITHUB_STEP_SUMMARY
-          fi
-
-  docker-images:
-    name: Build & (Conditionally) Push Images
+  docker:
+    name: Build Docker Images
     needs: test
     if: needs.test.result == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-      packages: write
     strategy:
-      fail-fast: false
       matrix:
-        service: [dispatcher, scheduler, server]
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_NAMESPACE: ${{ github.repository }} # owner/repo
-      COMMIT_SHA: ${{ github.sha }}
-      # Only push on real GitHub main branch runs (exclude act and require token)
-      PUSH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.actor != 'nektos/act' }}
+        service: [server, dispatcher, scheduler]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -224,74 +118,19 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GHCR
-        if: env.PUSH == 'true'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Select registry token (PAT preferred)
-        id: regtok
-        env:
-          FALLBACK_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Configure .npmrc for Docker build
         run: |
-          echo "token=$FALLBACK_GITHUB_TOKEN" >> $GITHUB_OUTPUT
-          echo "If installs fail with 403 for GitHub Packages, add PACKAGE_READ_TOKEN secret (PAT with read:packages)." >&2
+          echo "@returnacy:registry=https://npm.pkg.github.com/" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
 
-      - name: Extract package version
-        id: pkg
-        run: |
-          PKG_PATH="${{ matrix.service }}/package.json"
-          if [ -f "$PKG_PATH" ]; then
-            VERSION=$(jq -r '.version' "$PKG_PATH")
-          else
-            VERSION="0.0.0"
-          fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Define image tags
-        id: tags
-        run: |
-          # Normalise service name for tag (optional prefix)
-          SERVICE=${{ matrix.service }}
-          # enforce lowercase for GHCR (owner/repo may come mixed in act)
-          LOWER_NAMESPACE=$(echo "$IMAGE_NAMESPACE" | tr '[:upper:]' '[:lower:]')
-          BASE="${REGISTRY}/${LOWER_NAMESPACE}"
-          # tags: latest, version (if not 0.0.0), and sha
-          TAGS="${BASE}:${SERVICE}-latest,${BASE}:${SERVICE}-${COMMIT_SHA}"
-          if [ "${{ steps.pkg.outputs.version }}" != "0.0.0" ]; then
-            TAGS+=" ,${BASE}:${SERVICE}-v${{ steps.pkg.outputs.version }}" # temporary space will be stripped below
-          fi
-          # remove any accidental leading spaces after commas
-          CLEAN_TAGS=$(echo "$TAGS" | sed 's/, */,/g')
-          echo "tags=$CLEAN_TAGS" >> $GITHUB_OUTPUT
-          echo "Will build tags: $CLEAN_TAGS (push=$PUSH)"
-
-      - name: Build ${{ matrix.service }} image
+      - name: Build ${{ matrix.service }} Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ${{ matrix.service }}/Dockerfile
-          push: ${{ env.PUSH == 'true' }}
-          load: ${{ env.PUSH != 'true' }}
-          provenance: false
-          sbom: false
+          push: false
           build-args: |
-            GITHUB_PACKAGES_TOKEN=${{ steps.regtok.outputs.token }}
-          labels: |
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.ref.name=${{ github.ref_name }}
-            org.opencontainers.image.title=messaging-${{ matrix.service }}
-          tags: ${{ steps.tags.outputs.tags }}
+            GITHUB_PACKAGES_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
-      - name: Summary entry
-        run: |
-          if [ "${PUSH}" = "true" ]; then
-            echo "Pushed image(s) for ${{ matrix.service }}:" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Built (not pushed) image(s) for ${{ matrix.service }} (local act run or non-main branch):" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "${{ steps.tags.outputs.tags }}" | tr ',' '\n' >> $GITHUB_STEP_SUMMARY
+      - name: Image build summary
+        run: echo "Built ${{ matrix.service }} Docker image."
