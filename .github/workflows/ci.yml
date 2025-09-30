@@ -20,6 +20,10 @@ concurrency:
 jobs:
   test:
     name: Test (Node ${{ matrix.node }})
+    # Need packages: read to allow GITHUB_TOKEN to download GitHub Packages (scoped npm pkg)
+    permissions:
+      contents: read
+      packages: read
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
@@ -83,10 +87,16 @@ jobs:
         run: pnpm config set store-dir ~/.pnpm-store
 
       - name: Configure GitHub Packages registry for @returnacy
+        env:
+          FALLBACK_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "@returnacy:registry=https://npm.pkg.github.com" >> .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
-          echo "Configured .npmrc:" && cat .npmrc
+          set -euo pipefail
+          echo "@returnacy:registry=https://npm.pkg.github.com" > .npmrc
+          TOKEN_SOURCE="GITHUB_TOKEN"
+          TOKEN="$FALLBACK_GITHUB_TOKEN"
+          echo "(Optional) For private cross-repo packages set secret PACKAGE_READ_TOKEN with a PAT having read:packages" >&2
+          echo "//npm.pkg.github.com/:_authToken=${TOKEN}" >> .npmrc
+          echo "Configured .npmrc using $TOKEN_SOURCE (token redacted):" && sed 's/_authToken=.*/_authToken=***REDACTED***/' .npmrc
 
       - name: Tool versions
         run: |
@@ -210,6 +220,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Select registry token (PAT preferred)
+        id: regtok
+        env:
+          FALLBACK_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "token=$FALLBACK_GITHUB_TOKEN" >> $GITHUB_OUTPUT
+          echo "If installs fail with 403 for GitHub Packages, add PACKAGE_READ_TOKEN secret (PAT with read:packages)." >&2
+
       - name: Extract package version
         id: pkg
         run: |
@@ -249,7 +267,7 @@ jobs:
           provenance: false
           sbom: false
           build-args: |
-            GITHUB_PACKAGES_TOKEN=${{ secrets.GITHUB_TOKEN }}
+            GITHUB_PACKAGES_TOKEN=${{ steps.regtok.outputs.token }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
