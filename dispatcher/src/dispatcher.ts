@@ -1,4 +1,5 @@
-import 'dotenv/config';
+// Optional dotenv load (development); ignore if not installed in production image
+try { await import('dotenv/config'); } catch {}
 import { Processor } from './processor.js';
 import { createQueue } from './queue.js';
 import { createMessageWorker, createReceiptWorker } from './worker.js';
