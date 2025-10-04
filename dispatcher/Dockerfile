@@ -18,18 +18,24 @@ COPY db ./db
 COPY dispatcher ./dispatcher
 
 ARG GITHUB_PACKAGES_TOKEN
+ARG FORCE_REINSTALL=0
 ENV CI=true \
-    GITHUB_PACKAGES_TOKEN=${GITHUB_PACKAGES_TOKEN}
-# Perform install with GitHub Packages auth (token is provided via build-arg in CI). The root .npmrc references the env var so the token itself is not baked into the file.
+    GITHUB_PACKAGES_TOKEN=${GITHUB_PACKAGES_TOKEN} \
+    FORCE_REINSTALL=${FORCE_REINSTALL}
+# Perform recursive install (workspace) – FORCE_REINSTALL can be bumped to bust cache
 RUN corepack enable && \
-	(pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile)
+	echo "Force key: $FORCE_REINSTALL" && \
+	(pnpm install -r --frozen-lockfile || pnpm install -r --no-frozen-lockfile)
 
 RUN pnpm --filter @messaging-service/db exec prisma generate || true
-RUN pnpm --filter @messaging-service/db build && \
+RUN pnpm --filter @messaging-service/types build && \
+	pnpm --filter @messaging-service/db build && \
 	pnpm --filter @messaging-service/dispatcher build
 
 # Remove devDependencies (CI=true avoids TTY prompt)
-RUN pnpm prune --prod || pnpm install --prod --no-optional --frozen-lockfile
+# Install only production dependencies (avoid prune to prevent accidental removal of required packages like dotenv)
+# Keeping full node_modules (including dev deps) to avoid pruning workspace links needed at runtime.
+# TODO: later optimize by using `pnpm deploy --filter @messaging-service/dispatcher --prod`.
 
 ###############################################
 # Runtime stage
@@ -43,10 +49,14 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json /app/pnpm-workspace.yaml /app/tsconfig.base.json ./
 COPY --from=build /app/dispatcher/package.json ./dispatcher/package.json
 COPY --from=build /app/dispatcher/dist ./dispatcher/dist
+COPY --from=build /app/dispatcher/node_modules ./dispatcher/node_modules
 COPY --from=build /app/db/package.json ./db/package.json
 COPY --from=build /app/db/dist ./db/dist
-COPY --from=build /app/utils/package.json ./utils/package.json
-RUN if [ -d /app/utils/dist ]; then mkdir -p utils/dist && cp -r /app/utils/dist ./utils/; fi
+COPY --from=build /app/db/node_modules ./db/node_modules
+COPY --from=build /app/types/package.json ./types/package.json
+COPY --from=build /app/types/dist ./types/dist
+COPY --from=build /app/types/node_modules ./types/node_modules
+# (dotenv optional at runtime; we rely on env vars from the orchestrator)
 
 USER node
 CMD ["node", "dispatcher/dist/src/dispatcher.js"]
