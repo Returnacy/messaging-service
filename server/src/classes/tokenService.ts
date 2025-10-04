@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import type { TokenServiceConfig } from "@/types/tokenServiceConfig.js";
+import type { TokenServiceConfig } from "../types/tokenServiceConfig.js";
 
 export class TokenService {
   private clientId: string;
