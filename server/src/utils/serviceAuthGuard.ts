@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
-function hasRole(request: FastifyRequest, role: string, clientId?: string): boolean {
+function hasServiceRole(request: FastifyRequest, role: string, clientId?: string): boolean {
   console.log(`Checking role: ${role}, clientId: ${clientId}`);
   console.log('Request auth object:', request.auth);
 
@@ -24,9 +24,9 @@ function hasRole(request: FastifyRequest, role: string, clientId?: string): bool
   return false;
 }
 
-export function requireRole(role: string, clientId?: string) {
+export function requireServiceRole(role: string, clientId?: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    if (!hasRole(request, role, clientId)) {
+    if (!hasServiceRole(request, role, clientId)) {
       return reply.status(403).send({ error: 'Forbidden' });
     }
   };

@@ -1,10 +1,10 @@
 import type { FastifyInstance } from "fastify";
-import { requireRole } from '../../../../../utils/authGuards.js';
+import { requireServiceRole } from '../../../../../utils/serviceAuthGuard.js';
 import { batchHandler } from "./batch.controller.js";
 
 export async function batchRoutes(server: FastifyInstance) {
   server.post('/', {
-    preHandler: requireRole("send"),
+    preHandler: requireServiceRole("send"),
     handler: batchHandler
   });
 }
