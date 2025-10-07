@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { describe, it, expect } from 'vitest';
-import { requireRole } from '@/utils/authGuards.js';
+import { requireServiceRole } from '../../../src/utils/serviceAuthGuard.js';
 
 function makeReply() {
   return {
@@ -11,9 +11,9 @@ function makeReply() {
   } as any;
 }
 
-describe('requireRole', () => {
+describe('requireServiceRole', () => {
   it('allows when role in realm_access', async () => {
-    const pre = requireRole('admin');
+    const pre = requireServiceRole('admin');
     const request = { auth: { realm_access: { roles: ['admin'] } } } as any;
     const reply = makeReply();
     await pre(request, reply);
@@ -21,7 +21,7 @@ describe('requireRole', () => {
   });
 
   it('allows when role in resource_access specific client', async () => {
-    const pre = requireRole('send', 'messaging-service');
+    const pre = requireServiceRole('send', 'messaging-service');
     const request = { auth: { resource_access: { 'messaging-service': { roles: ['send'] } } } } as any;
     const reply = makeReply();
     await pre(request, reply);
@@ -29,7 +29,7 @@ describe('requireRole', () => {
   });
 
   it('allows when role in any client', async () => {
-    const pre = requireRole('read');
+    const pre = requireServiceRole('read');
     const request = { auth: { resource_access: { foo: { roles: ['read'] } } } } as any;
     const reply = makeReply();
     await pre(request, reply);
@@ -37,7 +37,7 @@ describe('requireRole', () => {
   });
 
   it('denies when role missing', async () => {
-    const pre = requireRole('admin');
+    const pre = requireServiceRole('admin');
     const request = { auth: { realm_access: { roles: [] }, resource_access: {} } } as any;
     const reply = makeReply();
     await pre(request, reply);
