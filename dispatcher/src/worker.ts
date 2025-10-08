@@ -15,19 +15,19 @@ export function createMessageWorker(
   return new Worker(
     queueName,
     async job => {
+      // Log before processing for more natural ordering
+      logger.info({ jobId: job.id, queue: queueName, messageId: job?.data?.id, status: job?.data?.status }, 'processing job');
       const result = await processor.processJob(job.data);
-
-      logger.info({ jobId: job.id, queue: queueName }, 'processing job');
 
       if (result.failed && !result.finalFailure && retriesQueue) {
         await retriesQueue.add('retry', job.data);
-        logger.info(`Moved job ${job.id} to retries queue`);
+        logger.info({ jobId: job.id, queue: queueName }, 'moved job to retries queue');
         return;
       } else if (result.failed && !result.finalFailure && !retriesQueue) {
-        logger.warn(`Job ${job.id} failed but no retries queue available`);
+        logger.warn({ jobId: job.id, queue: queueName }, 'job failed but no retries queue available');
         throw new Error('Job failed and no retries queue available, will retry in current queue');
       } else if (result.failed && result.finalFailure) {
-        logger.warn(`Job ${job.id} failed permanently`);
+        logger.warn({ jobId: job.id, queue: queueName }, 'job failed permanently');
       }
 
       return result;
