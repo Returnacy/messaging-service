@@ -1,6 +1,28 @@
-# Deployment Guide
+# Messaging Service — README
 
-This document outlines the steps required to deploy the **Messaging Service** and its associated components, including the database, dispatcher, and scheduler. It is intended for developers or operators responsible for deploying the system on **Railway**.
+This package contains the Messaging Service: HTTP server (internal APIs + webhooks), dispatcher workers, scheduler, DB layer, shared types, and utilities.
+
+For in-depth docs see: `../docs/messaging-service/*`.
+
+## Architecture (quick tour)
+- Server (Fastify) under `/server` exposes internal APIs at `/api/v1/messages` and provider webhooks at `/webhooks/*`.
+- Dispatcher under `/dispatcher` runs workers that consume from BullMQ queues: `messages.dispatch`, `messages.retries`, `messages.updates`.
+- Scheduler under `/scheduler` periodically claims due messages and enqueues to `messages.dispatch`.
+- DB under `/db` houses the Prisma schema and repository.
+- Shared types live in `/types`; common utilities in `/utils`.
+
+## Local development
+Use the integration compose at the repo root to run end-to-end with Keycloak, Redis, and Postgres:
+
+```bash
+docker compose -f ../docker-compose.integration.yml up -d --wait messaging-postgres messaging-migrate messaging-server messaging-dispatcher redis keycloak mock-user-service
+```
+
+Alternatively, run packages individually with pnpm in this workspace.
+
+## Deployment Guide (Railway)
+
+This section outlines the steps required to deploy the Messaging Service and components on Railway.
 
 ---
 
@@ -127,3 +149,4 @@ pnpm --filter scheduler start
 3. Trigger deployment and wait for the container to build.
 
 ## 4. Server (`/server`)
+Deploying the HTTP server on Railway follows the same pattern: build using `/server/Dockerfile`, set `REDIS_URL`, `DATABASE_URL`, `KEYCLOAK_BASE_URL`, `KEYCLOAK_REALM`, and allowed audiences via `KEYCLOAK_AUDIENCE`.
