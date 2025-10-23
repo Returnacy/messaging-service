@@ -1,5 +1,11 @@
 import { prisma } from './prismaClient.js';
 
+// Disable seed by default unless explicitly allowed
+if (process.env.ALLOW_SEED !== 'true') {
+  console.log('[messaging-service][db] Seed disabled (set ALLOW_SEED=true to enable)');
+  process.exit(0);
+}
+
 async function main() {
   // Idempotent upsert example for providers
   await prisma.provider.upsert({
