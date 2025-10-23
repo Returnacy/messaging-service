@@ -105,6 +105,45 @@ export class Processor {
         this.logger?.error?.('Failed to update message failure status for', msg.id, dbErr);
       }
 
+      // Record provider error details for observability and easier diagnostics
+      try {
+        const httpStatus: number | null = (err?.status ?? err?.statusCode ?? err?.response?.status) ?? null;
+        const providerId = (msg.providerId as any) || (msg.channel === 'EMAIL' ? 'resend' : (msg.channel ? String(msg.channel).toLowerCase() : 'unknown'));
+        // Best-effort request snapshot
+        const requestPayload: any = (() => {
+          try {
+            if (msg.channel === 'EMAIL') {
+              return {
+                from: (msg as any)?.payload?.from,
+                to: [(msg as any)?.payload?.to?.email].filter(Boolean),
+                subject: (msg as any)?.payload?.subject,
+              };
+            }
+            if (msg.channel === 'SMS') {
+              return {
+                to: (msg as any)?.payload?.to?.phone,
+                text: (msg as any)?.payload?.bodyText,
+              };
+            }
+          } catch (_) { /* noop */ }
+          return {};
+        })();
+        const responsePayload: any = {
+          error: errMessage,
+          code: err?.code ?? undefined,
+          details: (err && typeof err === 'object') ? (err.response?.data ?? undefined) : undefined,
+        };
+        await this.repo.createProviderRequestLog({
+          outboundMessageId: msg.id,
+          providerId,
+          request: requestPayload,
+          response: responsePayload,
+          httpStatus: (httpStatus ?? 0),
+        });
+      } catch (logErr) {
+        this.logger?.error?.('Failed to log provider error for message', msg.id, (logErr as Error).message);
+      }
+
       if (isTransient && !finalFailure) {
         this.logger?.warn?.('Transient error, will retry', { id: msg.id, err: errMessage });
         throw err;

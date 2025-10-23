@@ -1,7 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 
+// Configure Prisma logging to reduce noise by default.
+// Enable granular logs via env:
+//   PRISMA_LOG_QUERY=true to include SQL queries
+//   PRISMA_LOG_INFO=true to include informational logs
+const prismaLogs: Array<'query' | 'info' | 'warn' | 'error'> = ['warn', 'error'];
+if (process.env.PRISMA_LOG_INFO === 'true') prismaLogs.push('info');
+if (process.env.PRISMA_LOG_QUERY === 'true') prismaLogs.push('query');
+
 export const prisma = new PrismaClient({
-  log: ['query', 'info', 'warn', 'error'],
+  log: prismaLogs,
 });
 
 const gracefulShutdown = async () => {

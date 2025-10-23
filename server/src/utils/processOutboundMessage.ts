@@ -7,8 +7,11 @@ export async function processOutboundMessage(
   request: FastifyRequest,
   input: Message
 ): Promise<OutboundMessage> {
+  const logger = (request as any).log ?? { info: (..._args: any[]) => {}, warn: (..._args: any[]) => {}, error: (..._args: any[]) => {} };
   const refDate = input.scheduledAt ?? new Date();
-  const idempotencyKey: string = computeMessageMinuteHash({
+  // Prefer client-provided idempotencyKey to ensure stable dedup across retries/reruns
+  const providedKey = (input as any).idempotencyKey && String((input as any).idempotencyKey).trim();
+  const idempotencyKey: string = providedKey || computeMessageMinuteHash({
     recipientId: input.recipientId,
     channel: input.channel,
     payload: {
@@ -23,15 +26,20 @@ export async function processOutboundMessage(
 
   // Fast path: if a message with this key already exists, return it
   const existing = await request.server.repository.getOutboundMessageByIdempotencyKey(idempotencyKey);
-  if (existing) return existing;
+  if (existing) {
+    logger.info({ id: existing.id, idempotencyKey, dedup: true }, 'message dedup hit, returning existing');
+    return existing;
+  }
 
   const msgWithKey = { ...input, idempotencyKey } as any;
 
   const outboundMsg: OutboundMessage = await request.server.repository.createOutboundMessage(msgWithKey);
+  logger.info({ id: outboundMsg.id, idempotencyKey }, 'message persisted');
 
   if (outboundMsg.status === 'QUEUED' as MessageStatus) {
     const queue = getQueue('messages.dispatch', request.server.redisConnection);
     queue.add('dispatch', outboundMsg);
+    logger.info({ id: outboundMsg.id }, 'message enqueued for dispatch');
   }
 
   return outboundMsg;

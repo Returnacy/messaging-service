@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { Queue } from "bullmq";
 import { prisma } from "@messaging-service/db";
-import { scheduleDueMessages } from "@/scheduler.js";
+import { scheduleDueMessages } from "../../src/scheduler.js";
 import { randomUUID } from "crypto";
 import { Redis } from 'ioredis';
 

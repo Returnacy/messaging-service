@@ -5,7 +5,7 @@ import type {JWTVerifyOptions} from 'jose';
 export default fp(async (fastify, opts) => {
   // Required env config
   const KEYCLOAK_BASE_URL = process.env.KEYCLOAK_BASE_URL;
-  const REALM = process.env.KEYCLOAK_REALM;
+  const REALM = process.env.KEYCLOAK_REALM; 
   if (!KEYCLOAK_BASE_URL || !REALM) {
     fastify.log.error('Missing KEYCLOAK_BASE_URL or KEYCLOAK_REALM env vars');
     throw new Error('Keycloak configuration missing');
@@ -29,8 +29,14 @@ export default fp(async (fastify, opts) => {
         'http://keycloak:8080/realms/' + REALM
       ];
 
-  // Optional audience check - set KEYCLOAK_AUDIENCE to the expected aud (client-id) for this resource server.
-  const expectedAudience = process.env.KEYCLOAK_AUDIENCE || process.env.KEYCLOAK_CLIENT_ID || null;
+  // Optional audience checks
+  // Accept a comma-separated list via KEYCLOAK_AUDIENCE or KEYCLOAK_ALLOWED_AUDIENCES.
+  // Example (dev): KEYCLOAK_AUDIENCE="campaign-service,frontend-spa"
+  const audienceEnv = process.env.KEYCLOAK_AUDIENCE || process.env.KEYCLOAK_ALLOWED_AUDIENCES || '';
+  const allowedAudiences = audienceEnv
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
 
   // small leeway for clock skew (in seconds)
   const CLOCK_TOLERANCE_SECONDS = Number(process.env.KEYCLOAK_CLOCK_TOLERANCE_SECONDS || 60);
@@ -72,14 +78,28 @@ export default fp(async (fastify, opts) => {
         clockTolerance: CLOCK_TOLERANCE_SECONDS
       } as JWTVerifyOptions;
 
-      // optional audience enforcement - recommended for resource servers
-      if (expectedAudience) {
-        // audience can be string or array - we set expectedAudience
-        verifyOptions.audience = expectedAudience;
-      }
+      // Note: We don't pass verifyOptions.audience here because we want to support both public SPA tokens and service tokens
+      // in development. Instead, we post-validate aud/azp below if allowedAudiences are configured.
 
       // verify signature and claims
       const { payload } = await jwtVerify(token, JWKS, verifyOptions);
+
+      // Post-validate audience/azp if a list is configured
+      if (allowedAudiences.length > 0) {
+        const audClaim = payload.aud;
+        const azpClaim: unknown = (payload as any).azp;
+        const audList: string[] = Array.isArray(audClaim)
+          ? audClaim as string[]
+          : typeof audClaim === 'string'
+            ? [audClaim]
+            : [];
+        const azpList: string[] = typeof azpClaim === 'string' ? [azpClaim] : Array.isArray(azpClaim) ? azpClaim as string[] : [];
+        const combined = [...audList, ...azpList];
+        const match = combined.some(v => allowedAudiences.includes(v));
+        if (!match) {
+          return reply.status(401).send({ error: 'Invalid audience' });
+        }
+      }
 
       // attach payload to request for downstream auth checks
       request.auth = payload;

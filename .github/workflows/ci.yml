@@ -38,6 +38,7 @@ jobs:
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/messaging_dev
       REDIS_URL: redis://127.0.0.1:6379
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout
@@ -47,8 +48,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
-          registry-url: https://npm.pkg.github.com/
-          scope: '@returnacy'
 
       - name: Install pnpm
         run: |
@@ -70,6 +69,9 @@ jobs:
         run: |
           echo "@returnacy:registry=https://npm.pkg.github.com/" > .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+          # Also patch workspace .npmrc to avoid env substitution warnings during pnpm install
+          if [ -f ".npmrc" ]; then cp .npmrc .npmrc.ci; fi
+          if [ -f "./.npmrc" ]; then sed -i 's/${GITHUB_PACKAGES_TOKEN}/${{ secrets.GITHUB_TOKEN }}/g' .npmrc || true; fi
 
       - name: Ensure @returnacy/event-contracts is available
         run: pnpm view @returnacy/event-contracts version
@@ -84,9 +86,12 @@ jobs:
       - name: Build db package (needed for seed)
         run: pnpm --filter @messaging-service/db build
 
-      - name: Apply migrations & seed
+      - name: Apply migrations & seed (local Postgres)
         working-directory: db
         run: pnpm prisma migrate deploy --schema=./prisma/schema.prisma && pnpm prisma db seed --schema=./prisma/schema.prisma
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          ALLOW_SEED: 'true'
 
       - name: Build packages
         run: |
@@ -97,11 +102,28 @@ jobs:
       - name: Typecheck
         run: pnpm -r exec tsc --noEmit --pretty false --skipLibCheck
 
-      - name: Run tests
-        run: pnpm test
+      - name: Run server tests
+        run: pnpm --filter @messaging-service/server test
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
           REDIS_URL: ${{ env.REDIS_URL }}
+
+      - name: Run dispatcher tests
+        run: pnpm --filter @messaging-service/dispatcher test
+        env:
+          REDIS_URL: ${{ env.REDIS_URL }}
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Run scheduler tests
+        run: pnpm --filter @messaging-service/scheduler test
+        env:
+          REDIS_URL: ${{ env.REDIS_URL }}
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Run db tests
+        run: pnpm --filter @messaging-service/db test
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
 
   docker:
     name: Build Docker Images

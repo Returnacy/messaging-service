@@ -1,8 +1,11 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
-function hasRole(request: FastifyRequest, role: string, clientId?: string): boolean {
-  console.log(`Checking role: ${role}, clientId: ${clientId}`);
-  console.log('Request auth object:', request.auth);
+function hasServiceRole(request: FastifyRequest, role: string, clientId?: string): boolean {
+  // Optional debug logging to inspect token claims during development
+  if (process.env.AUTH_DEBUG === 'true') {
+    request.log.debug({ role, clientId }, 'checking service role');
+    request.log.debug({ auth: request.auth }, 'request auth');
+  }
 
   // 1. Check realm roles
   const realmRoles = request.auth?.realm_access?.roles || [];
@@ -24,9 +27,9 @@ function hasRole(request: FastifyRequest, role: string, clientId?: string): bool
   return false;
 }
 
-export function requireRole(role: string, clientId?: string) {
+export function requireServiceRole(role: string, clientId?: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    if (!hasRole(request, role, clientId)) {
+    if (!hasServiceRole(request, role, clientId)) {
       return reply.status(403).send({ error: 'Forbidden' });
     }
   };
