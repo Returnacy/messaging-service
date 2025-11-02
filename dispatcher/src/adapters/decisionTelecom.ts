@@ -17,7 +17,7 @@ export async function sendWithDecisionTelecomAdapter(message: OutboundMessage): 
   const sender = senderFromMessage || senderFromEnv || 'Returnacy';
 
   const requestPayload = {
-    phone: message.payload.to.phone,
+    phone: message.payload.to.phone.replace('+', ''),
     sender,
     text: message.payload.bodyText,
     validity_period: DECISIONTELECOM_SMS_VALIDITY_PERIOD,
