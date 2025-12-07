@@ -1,5 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 
+// Validate DATABASE_URL before initializing Prisma
+if (!process.env.DATABASE_URL) {
+  console.error('ERROR: DATABASE_URL environment variable is not set!');
+  console.error('The messaging-service scheduler requires a valid DATABASE_URL to connect to PostgreSQL.');
+  throw new Error('DATABASE_URL must be set. Did you forget to provision a database?');
+}
+
 // Configure Prisma logging to reduce noise by default.
 // Enable granular logs via env:
 //   PRISMA_LOG_QUERY=true to include SQL queries

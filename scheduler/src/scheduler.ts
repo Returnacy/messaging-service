@@ -7,18 +7,26 @@ import pino from 'pino';
 
 const logger = pino();
 
-if (!process.env.REDIS_URL) {
-  throw new Error('REDIS_URL not set in the environment!');
-}
-
 const BATCH_SIZE = Number(process.env.SCHEDULER_BATCH_SIZE ?? 100);
 
-const connection = new Redis(process.env.REDIS_URL!, {
-  maxRetriesPerRequest: null,
-  lazyConnect: true, // connect only when first used
-});
+// Initialize connections lazily to allow proper error handling
+let connection: Redis | null = null;
+let dispatchQueue: Queue | null = null;
 
-const dispatchQueue = new Queue('messages.dispatch', { connection });
+function initializeConnections() {
+  const redisUrl = process.env.REDIS_URL;
+
+  if (!redisUrl) {
+    throw new Error('REDIS_URL environment variable is not set');
+  }
+
+  connection = new Redis(redisUrl, {
+    maxRetriesPerRequest: null,
+    lazyConnect: true,
+  });
+
+  dispatchQueue = new Queue('messages.dispatch', { connection });
+}
 
 /**
  * Atomically claim up to BATCH_SIZE due messages using SKIP LOCKED,
@@ -86,6 +94,10 @@ async function claimDueMessages(now: Date, batchSize: number): Promise<OutboundM
 }
 
 export async function scheduleDueMessages() {
+  if (!dispatchQueue) {
+    throw new Error('Dispatch queue not initialized');
+  }
+
   const now = new Date();
 
   const messages = await claimDueMessages(now, BATCH_SIZE);
@@ -103,19 +115,31 @@ export async function scheduleDueMessages() {
 async function start() {
   const runOnce = process.env.SCHEDULER_RUN_ONCE === 'true' || process.argv.includes('--run-once');
 
+  try {
+    // Initialize connections before scheduling
+    initializeConnections();
+    logger.info('Scheduler initialized successfully');
+  } catch (err) {
+    logger.error(err, 'Failed to initialize scheduler');
+    process.exitCode = 1;
+    process.exit(1);
+  }
+
   if (runOnce) {
     try {
       await scheduleDueMessages();
+      logger.info('Scheduler run-once completed successfully');
     } catch (err) {
       logger.error(err, 'Scheduler runOnce error');
       process.exitCode = 1;
     } finally {
-      try { await dispatchQueue.close(); } catch {}
-      try { await connection.quit(); } catch {}
+      try { if (dispatchQueue) await dispatchQueue.close(); } catch {}
+      try { if (connection) await connection.quit(); } catch {}
       try { await prisma.$disconnect(); } catch {}
       process.exit();
     }
   } else {
+    logger.info('Starting scheduler in cron mode (every minute)');
     cron.schedule('* * * * *', async () => {
       try {
         await scheduleDueMessages();
