@@ -35,10 +35,14 @@ ENV NODE_ENV=production \
 WORKDIR /app
 
 # Copy workspace config for proper module resolution
-COPY --from=build /app/package.json /app/pnpm-workspace.yaml ./
+COPY --from=build /app/package.json /app/pnpm-workspace.yaml /app/tsconfig.base.json ./
 
 # Copy node_modules with Prisma client (from pnpm workspace)
 COPY --from=build /app/node_modules ./node_modules
+
+# Copy db package structure for Prisma client resolution
+COPY --from=build /app/db/package.json ./db/package.json
+COPY --from=build /app/db/node_modules ./db/node_modules
 
 # Copy the bundled scheduler
 COPY --from=build /app/scheduler/dist/scheduler.bundle.js ./scheduler.bundle.js
