@@ -46,8 +46,7 @@ COPY --from=build /app/scheduler/package.json ./scheduler/package.json
 COPY --from=build /app/scheduler/dist ./scheduler/dist
 COPY --from=build /app/db/package.json ./db/package.json
 COPY --from=build /app/db/dist ./db/dist
-COPY --from=build /app/utils/package.json ./utils/package.json
-COPY --from=build /app/utils/dist ./utils/dist
+COPY --from=build /app/utils ./utils
 
 USER node
 
