@@ -41,17 +41,19 @@ RUN corepack enable
 
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json /app/pnpm-workspace.yaml /app/tsconfig.base.json ./
+COPY --from=build /app/types ./types
 COPY --from=build /app/scheduler/package.json ./scheduler/package.json
 COPY --from=build /app/scheduler/dist ./scheduler/dist
 COPY --from=build /app/db/package.json ./db/package.json
 COPY --from=build /app/db/dist ./db/dist
 COPY --from=build /app/utils/package.json ./utils/package.json
-RUN if [ -d /app/utils/dist ]; then mkdir -p utils/dist && cp -r /app/utils/dist ./utils/; fi
+COPY --from=build /app/utils/dist ./utils/dist
 
 USER node
 
 # Default to run-once mode for Railway cron jobs
 # Set SCHEDULER_RUN_ONCE=false for continuous cron mode
-ENV SCHEDULER_RUN_ONCE=true
+ENV SCHEDULER_RUN_ONCE=true \
+    NODE_PATH=/app/node_modules
 
 CMD ["node", "scheduler/dist/src/scheduler.js"]
