@@ -41,6 +41,7 @@ RUN corepack enable
 
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json /app/pnpm-workspace.yaml /app/tsconfig.base.json ./
+COPY --from=build /app/start-scheduler.mjs ./start-scheduler.mjs
 COPY --from=build /app/types ./types
 COPY --from=build /app/scheduler/package.json ./scheduler/package.json
 COPY --from=build /app/scheduler/dist ./scheduler/dist
@@ -52,7 +53,7 @@ USER node
 
 # Default to run-once mode for Railway cron jobs
 # Set SCHEDULER_RUN_ONCE=false for continuous cron mode
-ENV SCHEDULER_RUN_ONCE=true \
-    NODE_PATH=/app/node_modules
+ENV SCHEDULER_RUN_ONCE=true
 
-CMD ["node", "scheduler/dist/src/scheduler.js"]
+# Use wrapper script to ensure proper module resolution in pnpm workspace
+CMD ["node", "start-scheduler.mjs"]

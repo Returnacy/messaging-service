@@ -14,7 +14,7 @@
     "test:scheduler": "pnpm --filter scheduler test",
     "test:server": "pnpm --filter server test",
     "test": "pnpm -r test -- --coverage",
-    "scheduler:run-once": "node scheduler/dist/src/scheduler.js"
+    "scheduler:run-once": "node start-scheduler.mjs"
   },
   "workspaces": [
     "types",
