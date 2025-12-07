@@ -27,31 +27,28 @@ RUN pnpm --filter @messaging-service/db build && \
 	pnpm --filter @messaging-service/scheduler build
 
 ###############################################
-# Runtime stage - Minimal with bundled code
+# Runtime stage - Same as dispatcher
 ###############################################
 FROM node:20-alpine
 ENV NODE_ENV=production \
 	NODE_OPTIONS="--max_old_space_size=512"
 WORKDIR /app
 
-# Copy workspace config for proper module resolution
-COPY --from=build /app/package.json /app/pnpm-workspace.yaml /app/tsconfig.base.json ./
-
-# Copy node_modules with Prisma client (from pnpm workspace)
 COPY --from=build /app/node_modules ./node_modules
-
-# Copy db package structure for Prisma client resolution
+COPY --from=build /app/package.json /app/pnpm-workspace.yaml /app/tsconfig.base.json ./
+COPY --from=build /app/scheduler/package.json ./scheduler/package.json
+COPY --from=build /app/scheduler/dist ./scheduler/dist
+COPY --from=build /app/scheduler/node_modules ./scheduler/node_modules
 COPY --from=build /app/db/package.json ./db/package.json
+COPY --from=build /app/db/dist ./db/dist
 COPY --from=build /app/db/node_modules ./db/node_modules
-
-# Copy the bundled scheduler
-COPY --from=build /app/scheduler/dist/scheduler.bundle.js ./scheduler.bundle.js
-COPY --from=build /app/scheduler/dist/scheduler.bundle.js.map ./scheduler.bundle.js.map
+COPY --from=build /app/types/package.json ./types/package.json
+COPY --from=build /app/types/dist ./types/dist
+COPY --from=build /app/types/node_modules ./types/node_modules
 
 USER node
 
 # Default to run-once mode for Railway cron jobs
 ENV SCHEDULER_RUN_ONCE=true
 
-# Run the bundled scheduler - single file, no module resolution issues
-CMD ["node", "scheduler.bundle.js"]
+CMD ["node", "scheduler/dist/src/scheduler.js"]
