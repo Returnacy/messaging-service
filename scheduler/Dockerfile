@@ -27,37 +27,26 @@ RUN pnpm --filter @messaging-service/db build && \
 	pnpm --filter @messaging-service/scheduler build
 
 ###############################################
-# Runtime stage - Fresh install
+# Runtime stage - Minimal with bundled code
 ###############################################
 FROM node:20-alpine
 ENV NODE_ENV=production \
 	NODE_OPTIONS="--max_old_space_size=512"
 WORKDIR /app
 
-# Copy workspace config and package files
-COPY --from=build /app/package.json /app/pnpm-workspace.yaml /app/tsconfig.base.json ./
-COPY --from=build /app/.npmrc ./.npmrc
+# Only copy the bundled scheduler and Prisma client
+COPY --from=build /app/scheduler/dist/scheduler.bundle.js ./scheduler.bundle.js
+COPY --from=build /app/scheduler/dist/scheduler.bundle.js.map ./scheduler.bundle.js.map
+COPY --from=build /app/db/prisma ./prisma
 
-# Copy all workspace packages
-COPY --from=build /app/types ./types
-COPY --from=build /app/utils ./utils
-COPY --from=build /app/db/package.json ./db/package.json
-COPY --from=build /app/db/dist ./db/dist
-COPY --from=build /app/db/prisma ./db/prisma
-COPY --from=build /app/scheduler/package.json ./scheduler/package.json
-COPY --from=build /app/scheduler/dist ./scheduler/dist
-
-# Fresh install - this creates proper node_modules structure
-ARG GITHUB_PACKAGES_TOKEN
-ENV GITHUB_PACKAGES_TOKEN=${GITHUB_PACKAGES_TOKEN}
-RUN corepack enable && \
-	pnpm install --prod --no-optional && \
-	cd db && npx prisma generate
+# Install ONLY @prisma/client (the only external dependency)
+RUN npm install @prisma/client@6.14.0 && \
+	npx prisma generate
 
 USER node
 
 # Default to run-once mode for Railway cron jobs
 ENV SCHEDULER_RUN_ONCE=true
 
-# Run directly - dependencies will be properly resolved now
-CMD ["node", "scheduler/dist/src/scheduler.js"]
+# Run the bundled scheduler - single file, no module resolution issues
+CMD ["node", "scheduler.bundle.js"]
