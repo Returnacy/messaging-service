@@ -13,7 +13,8 @@
     "test:dispatcher": "pnpm --filter dispatcher test",
     "test:scheduler": "pnpm --filter scheduler test",
     "test:server": "pnpm --filter server test",
-    "test": "pnpm -r test -- --coverage"
+    "test": "pnpm -r test -- --coverage",
+    "scheduler:run-once": "node scheduler/dist/src/scheduler.js"
   },
   "workspaces": [
     "types",
