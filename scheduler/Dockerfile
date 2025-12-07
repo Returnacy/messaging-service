@@ -34,12 +34,15 @@ ENV NODE_ENV=production \
 	NODE_OPTIONS="--max_old_space_size=512"
 WORKDIR /app
 
-# Copy the bundled scheduler
-COPY --from=build /app/scheduler/dist/scheduler.bundle.js ./scheduler.bundle.js
-COPY --from=build /app/scheduler/dist/scheduler.bundle.js.map ./scheduler.bundle.js.map
+# Copy workspace config for proper module resolution
+COPY --from=build /app/package.json /app/pnpm-workspace.yaml ./
 
 # Copy node_modules with Prisma client (from pnpm workspace)
 COPY --from=build /app/node_modules ./node_modules
+
+# Copy the bundled scheduler
+COPY --from=build /app/scheduler/dist/scheduler.bundle.js ./scheduler.bundle.js
+COPY --from=build /app/scheduler/dist/scheduler.bundle.js.map ./scheduler.bundle.js.map
 
 USER node
 
