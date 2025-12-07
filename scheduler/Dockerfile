@@ -34,14 +34,11 @@ ENV NODE_ENV=production \
 	NODE_OPTIONS="--max_old_space_size=512"
 WORKDIR /app
 
-# Only copy the bundled scheduler and Prisma client
+# Only copy the bundled scheduler and already-generated Prisma client
 COPY --from=build /app/scheduler/dist/scheduler.bundle.js ./scheduler.bundle.js
 COPY --from=build /app/scheduler/dist/scheduler.bundle.js.map ./scheduler.bundle.js.map
-COPY --from=build /app/db/prisma ./prisma
-
-# Install ONLY @prisma/client (the only external dependency)
-RUN npm install @prisma/client@6.14.0 && \
-	npx prisma generate
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 
 USER node
 
