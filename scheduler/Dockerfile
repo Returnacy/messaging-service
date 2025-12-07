@@ -22,38 +22,42 @@ ENV CI=true \
 RUN corepack enable && \
 	(pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile)
 
-RUN pnpm --filter @messaging-service/db exec prisma generate || true
+RUN pnpm --filter @messaging-service/db exec prisma generate
 RUN pnpm --filter @messaging-service/db build && \
 	pnpm --filter @messaging-service/scheduler build
 
-RUN pnpm prune --prod || pnpm install --prod --no-optional --frozen-lockfile
-
 ###############################################
-# Runtime stage
+# Runtime stage - Fresh install
 ###############################################
 FROM node:20-alpine
 ENV NODE_ENV=production \
 	NODE_OPTIONS="--max_old_space_size=512"
 WORKDIR /app
 
-# Enable pnpm for Railway cron commands
-RUN corepack enable
-
-COPY --from=build /app/node_modules ./node_modules
+# Copy workspace config and package files
 COPY --from=build /app/package.json /app/pnpm-workspace.yaml /app/tsconfig.base.json ./
-COPY --from=build /app/start-scheduler.mjs ./start-scheduler.mjs
+COPY --from=build /app/.npmrc ./.npmrc
+
+# Copy all workspace packages
 COPY --from=build /app/types ./types
-COPY --from=build /app/scheduler/package.json ./scheduler/package.json
-COPY --from=build /app/scheduler/dist ./scheduler/dist
+COPY --from=build /app/utils ./utils
 COPY --from=build /app/db/package.json ./db/package.json
 COPY --from=build /app/db/dist ./db/dist
-COPY --from=build /app/utils ./utils
+COPY --from=build /app/db/prisma ./db/prisma
+COPY --from=build /app/scheduler/package.json ./scheduler/package.json
+COPY --from=build /app/scheduler/dist ./scheduler/dist
+
+# Fresh install - this creates proper node_modules structure
+ARG GITHUB_PACKAGES_TOKEN
+ENV GITHUB_PACKAGES_TOKEN=${GITHUB_PACKAGES_TOKEN}
+RUN corepack enable && \
+	pnpm install --prod --no-optional && \
+	cd db && npx prisma generate
 
 USER node
 
 # Default to run-once mode for Railway cron jobs
-# Set SCHEDULER_RUN_ONCE=false for continuous cron mode
 ENV SCHEDULER_RUN_ONCE=true
 
-# Use wrapper script to ensure proper module resolution in pnpm workspace
-CMD ["node", "start-scheduler.mjs"]
+# Run directly - dependencies will be properly resolved now
+CMD ["node", "scheduler/dist/src/scheduler.js"]
