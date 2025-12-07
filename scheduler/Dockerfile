@@ -38,9 +38,9 @@ WORKDIR /app
 COPY --from=build /app/scheduler/dist/scheduler.bundle.js ./scheduler.bundle.js
 COPY --from=build /app/scheduler/dist/scheduler.bundle.js.map ./scheduler.bundle.js.map
 
-# Copy Prisma client generated in db package (prisma generate ran in db workspace)
-COPY --from=build /app/db/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build /app/db/node_modules/@prisma/client ./node_modules/@prisma/client
+# Install @prisma/client package and copy the generated client from build stage
+RUN npm install @prisma/client@6.14.0
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 
 USER node
 
