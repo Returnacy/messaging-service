@@ -7,6 +7,25 @@ import pino from 'pino';
 
 const logger = pino();
 
+// Helper to ensure logs are visible in Railway cron jobs
+function log(level: 'info' | 'error', message: string, data?: any) {
+  const runOnce = process.env.SCHEDULER_RUN_ONCE === 'true' || process.argv.includes('--run-once');
+
+  // For cron jobs, use console to ensure immediate visibility
+  if (runOnce) {
+    const timestamp = new Date().toISOString();
+    const logData = data ? JSON.stringify(data) : '';
+    console.log(`[${timestamp}] ${level.toUpperCase()}: ${message} ${logData}`.trim());
+  }
+
+  // Also log to pino for consistency
+  if (level === 'error') {
+    logger.error(data || {}, message);
+  } else {
+    logger.info(data || {}, message);
+  }
+}
+
 const BATCH_SIZE = Number(process.env.SCHEDULER_BATCH_SIZE ?? 100);
 
 // Initialize connections lazily to allow proper error handling
@@ -101,50 +120,66 @@ export async function scheduleDueMessages() {
   const now = new Date();
 
   const messages = await claimDueMessages(now, BATCH_SIZE);
-  if (messages.length === 0) return;
+  if (messages.length === 0) {
+    log('info', 'No messages due for scheduling');
+    return;
+  }
 
   // Enqueue messages. Dispatcher fetches full message.
   await dispatchQueue.addBulk(
     messages.map(m => ({ name: 'dispatch', data: m }))
   );
 
-  logger.info({ count: messages.length }, 'Scheduled messages');
+  log('info', 'Scheduled messages', { count: messages.length });
 }
 
 // Start in cron mode or one-off mode to enable scale-to-zero on Railway.
 async function start() {
   const runOnce = process.env.SCHEDULER_RUN_ONCE === 'true' || process.argv.includes('--run-once');
 
+  log('info', `Starting scheduler in ${runOnce ? 'run-once' : 'cron'} mode`);
+
+  // Log environment configuration for debugging
+  log('info', 'Environment check', {
+    hasRedisUrl: !!process.env.REDIS_URL,
+    hasDatabaseUrl: !!process.env.DATABASE_URL,
+    batchSize: BATCH_SIZE,
+    nodeEnv: process.env.NODE_ENV,
+  });
+
   try {
     // Initialize connections before scheduling
     initializeConnections();
-    logger.info('Scheduler initialized successfully');
+    log('info', 'Scheduler connections initialized successfully');
   } catch (err) {
-    logger.error(err, 'Failed to initialize scheduler');
+    log('error', 'Failed to initialize scheduler', { error: String(err) });
     process.exitCode = 1;
     process.exit(1);
   }
 
   if (runOnce) {
     try {
+      log('info', 'Executing scheduled message check...');
       await scheduleDueMessages();
-      logger.info('Scheduler run-once completed successfully');
+      log('info', 'Scheduler run-once completed successfully');
     } catch (err) {
-      logger.error(err, 'Scheduler runOnce error');
+      log('error', 'Scheduler runOnce error', { error: String(err) });
       process.exitCode = 1;
     } finally {
+      log('info', 'Cleaning up connections...');
       try { if (dispatchQueue) await dispatchQueue.close(); } catch {}
       try { if (connection) await connection.quit(); } catch {}
       try { await prisma.$disconnect(); } catch {}
+      log('info', 'Scheduler exiting');
       process.exit();
     }
   } else {
-    logger.info('Starting scheduler in cron mode (every minute)');
+    log('info', 'Starting scheduler in cron mode (every minute)');
     cron.schedule('* * * * *', async () => {
       try {
         await scheduleDueMessages();
       } catch (err) {
-        logger.error(err, 'Scheduler error');
+        log('error', 'Scheduler error', { error: String(err) });
       }
     });
   }

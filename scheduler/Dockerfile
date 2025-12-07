@@ -46,4 +46,9 @@ COPY --from=build /app/utils/package.json ./utils/package.json
 RUN if [ -d /app/utils/dist ]; then mkdir -p utils/dist && cp -r /app/utils/dist ./utils/; fi
 
 USER node
+
+# Default to run-once mode for Railway cron jobs
+# Set SCHEDULER_RUN_ONCE=false for continuous cron mode
+ENV SCHEDULER_RUN_ONCE=true
+
 CMD ["node", "scheduler/dist/src/scheduler.js"]
