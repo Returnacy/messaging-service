@@ -38,10 +38,9 @@ WORKDIR /app
 COPY --from=build /app/scheduler/dist/scheduler.bundle.js ./scheduler.bundle.js
 COPY --from=build /app/scheduler/dist/scheduler.bundle.js.map ./scheduler.bundle.js.map
 
-# Copy Prisma client from pnpm workspace structure
-# The generated client is in .prisma/client and referenced by @prisma/client package
-COPY --from=build /app/node_modules/.pnpm/@prisma+client@6.14.0_prisma@6.14.0/node_modules/@prisma/client ./node_modules/@prisma/client
-COPY --from=build /app/node_modules/.pnpm/@prisma+client@6.14.0_prisma@6.14.0/node_modules/.prisma ./node_modules/.prisma
+# Copy Prisma client generated in db package (prisma generate ran in db workspace)
+COPY --from=build /app/db/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/db/node_modules/@prisma/client ./node_modules/@prisma/client
 
 USER node
 
