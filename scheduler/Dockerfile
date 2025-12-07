@@ -36,6 +36,9 @@ ENV NODE_ENV=production \
 	NODE_OPTIONS="--max_old_space_size=512"
 WORKDIR /app
 
+# Enable pnpm for Railway cron commands
+RUN corepack enable
+
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json /app/pnpm-workspace.yaml /app/tsconfig.base.json ./
 COPY --from=build /app/scheduler/package.json ./scheduler/package.json
