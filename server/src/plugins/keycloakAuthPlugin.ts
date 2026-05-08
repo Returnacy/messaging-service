@@ -99,8 +99,12 @@ export default fp(async (fastify) => {
 
       request.auth = payload;
       return;
-    } catch (err) {
-      fastify.log.debug({ err }, '[messaging-service] JWT verification failed');
+    } catch (err: any) {
+      fastify.log.warn({
+        name: err?.name,
+        code: err?.code,
+        message: err?.message,
+      }, '[messaging-service] JWT verification failed');
       return reply.status(401).send({ error: 'Invalid or expired token' });
     }
   });
