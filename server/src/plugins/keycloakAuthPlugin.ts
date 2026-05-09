@@ -4,39 +4,15 @@ import { createRemoteJWKSet, jwtVerify, decodeJwt } from 'jose';
 import type { JWTVerifyOptions } from 'jose';
 
 export default fp(async (fastify) => {
-  const KEYCLOAK_BASE_URL = process.env.KEYCLOAK_BASE_URL;
-  const REALM = process.env.KEYCLOAK_REALM;
-  if (!KEYCLOAK_BASE_URL || !REALM) {
-    fastify.log.error('Missing KEYCLOAK_BASE_URL or KEYCLOAK_REALM env vars');
-    throw new Error('Keycloak configuration missing');
-  }
-
-  const keycloakJwksUrl = `${KEYCLOAK_BASE_URL}/realms/${REALM}/protocol/openid-connect/certs`;
-  const keycloakIssuer = `${KEYCLOAK_BASE_URL}/realms/${REALM}`;
-  fastify.log.info({ keycloakJwksUrl }, '[messaging-service] Keycloak JWKS URL');
-
-  const KEYCLOAK_JWKS = createRemoteJWKSet(new URL(keycloakJwksUrl));
-
+  // Phase 2.6 single-issuer cutover: only accept tokens issued by user-service.
   const selfIssuer = process.env.SELF_ISSUER?.trim();
   const selfIssuerJwksUrl = process.env.SELF_ISSUER_JWKS_URL?.trim();
-  const SELF_JWKS = (selfIssuer && selfIssuerJwksUrl)
-    ? createRemoteJWKSet(new URL(selfIssuerJwksUrl))
-    : null;
-  if (SELF_JWKS) {
-    fastify.log.info({ selfIssuer, selfIssuerJwksUrl }, '[messaging-service] Dual-issuer mode: also accepting self-issued tokens');
+  if (!selfIssuer || !selfIssuerJwksUrl) {
+    fastify.log.error('Missing SELF_ISSUER or SELF_ISSUER_JWKS_URL env vars — single-issuer auth requires both');
+    throw new Error('Self-issued JWT configuration missing');
   }
-
-  const configuredIssuersEnv = process.env.KEYCLOAK_ISSUER;
-  const baseIssuers: string[] = configuredIssuersEnv
-    ? configuredIssuersEnv.split(',').map((s) => s.trim()).filter(Boolean)
-    : [
-        keycloakIssuer,
-        `http://localhost:8080/realms/${REALM}`,
-        `http://keycloak:8080/realms/${REALM}`,
-      ];
-  const validIssuers: string[] = SELF_JWKS && selfIssuer
-    ? [...baseIssuers, selfIssuer]
-    : baseIssuers;
+  const SELF_JWKS = createRemoteJWKSet(new URL(selfIssuerJwksUrl));
+  fastify.log.info({ selfIssuer, selfIssuerJwksUrl }, '[messaging-service] Single-issuer mode: only accepting self-issued tokens');
 
   const audienceEnv = process.env.KEYCLOAK_AUDIENCE || process.env.KEYCLOAK_ALLOWED_AUDIENCES || '';
   const allowedAudiences = audienceEnv.split(',').map((s) => s.trim()).filter(Boolean);
@@ -55,35 +31,17 @@ export default fp(async (fastify) => {
       if (!token) return reply.status(401).send({ error: 'Missing token' });
 
       let tokenIss: string | undefined;
-      try {
-        tokenIss = decodeJwt(token).iss;
-      } catch {
-        // fall through; jwtVerify will reject below
+      try { tokenIss = decodeJwt(token).iss; } catch {}
+      if (!tokenIss || tokenIss !== selfIssuer) {
+        return reply.status(401).send({ error: 'INVALID_OR_LEGACY_TOKEN' });
       }
-
-      if (process.env.NODE_ENV !== 'production') {
-        try {
-          const decoded = decodeJwt(token);
-          fastify.log.debug({
-            iss: decoded.iss,
-            azp: (decoded as any).azp,
-            aud: decoded.aud,
-            exp: decoded.exp,
-            sub: decoded.sub,
-          }, '[messaging-service] decoded token payload (debug)');
-        } catch (err) {
-          fastify.log.debug({ err }, '[messaging-service] failed to decode token payload');
-        }
-      }
-
-      const jwksToUse = (SELF_JWKS && tokenIss && tokenIss === selfIssuer) ? SELF_JWKS : KEYCLOAK_JWKS;
 
       const verifyOptions: JWTVerifyOptions = {
-        issuer: validIssuers,
+        issuer: selfIssuer,
         clockTolerance: CLOCK_TOLERANCE_SECONDS,
       };
 
-      const { payload } = await jwtVerify(token, jwksToUse, verifyOptions);
+      const { payload } = await jwtVerify(token, SELF_JWKS, verifyOptions);
 
       if (allowedAudiences.length > 0) {
         const audClaim = payload.aud;
