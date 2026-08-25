@@ -6,6 +6,23 @@ import { ProviderRateLimiter } from './providerRateLimiter.js';
 import type { ProviderResponse } from './adapters/types/providerResponse.js';
 import { createEvent, EventTypes } from '@returnacy/event-contracts';
 
+/**
+ * Hard stop on outbound sends.
+ *
+ * A newly provisioned tenant must not be able to email or SMS anyone by
+ * accident, and "we just won't set the API keys" is not a control — it is an
+ * omission that a later copy-paste of env vars silently undoes. With
+ * MESSAGING_DRY_RUN=true the dispatcher walks the whole pipeline (status
+ * transitions, provider request log, events) but never calls a provider.
+ *
+ * Read per call rather than cached at import so it can be flipped without a
+ * rebuild, and so tests can toggle it.
+ */
+export function isDryRun(): boolean {
+  const flag = String(process.env.MESSAGING_DRY_RUN ?? '').toLowerCase().trim();
+  return flag === 'true' || flag === '1' || flag === 'yes';
+}
+
 export class Processor {
   private repo: RepositoryPrisma;
   private limiter: ProviderRateLimiter;
@@ -36,15 +53,34 @@ export class Processor {
       await this.limiter.consume(rateLimitKey);
 
       let res: ProviderResponse;
-      switch (msg.channel) {
-        case 'EMAIL':
-          res = await sendWithResendAdapter(msg) as ProviderResponse;
-          break;
-        case 'SMS':
-          res = await sendWithDecisionTelecomAdapter(msg) as ProviderResponse;
-          break;
-        default:
+      if (isDryRun()) {
+        // Validate the channel exactly as a real send would, so a dry run still
+        // surfaces a misconfigured message instead of quietly "succeeding".
+        if (msg.channel !== 'EMAIL' && msg.channel !== 'SMS') {
           throw new Error(`Unsupported channel: ${msg.channel}`);
+        }
+        this.logger?.warn?.(
+          'MESSAGING_DRY_RUN: not sending', msg.id, 'channel', msg.channel, 'to', (msg as any).to ?? (msg as any).recipient ?? null,
+        );
+        res = {
+          outboundMessageId: msg.id,
+          providerId: msg.providerId ?? (msg.channel === 'EMAIL' ? 'resend' : 'decisiontelecom'),
+          providerMessageId: null,
+          httpStatus: null,
+          requestPayload: { dryRun: true },
+          responsePayload: { dryRun: true },
+        } as unknown as ProviderResponse;
+      } else {
+        switch (msg.channel) {
+          case 'EMAIL':
+            res = await sendWithResendAdapter(msg) as ProviderResponse;
+            break;
+          case 'SMS':
+            res = await sendWithDecisionTelecomAdapter(msg) as ProviderResponse;
+            break;
+          default:
+            throw new Error(`Unsupported channel: ${msg.channel}`);
+        }
       }
 
       const providerId = res?.providerId ?? msg.providerId ?? 'unknown';
